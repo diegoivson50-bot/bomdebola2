@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕊️ Pelada da Paz</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #1a2a3a; display: flex; justify-content: center; padding: 20px; }
+        .container { background: #fff; max-width: 1100px; width: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: #1a2a3a; border-bottom: 3px solid #f39c12; padding-bottom: 10px; margin-top: 0; font-size: 2rem; }
+        h1 .pomba { font-size: 2.2rem; margin-right: 8px; }
+
+        .dropdown { position: relative; display: inline-block; margin-bottom: 15px; }
+        .dropdown button { background: #8e44ad; color: #fff; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .dropdown button:hover { background: #6c3483; }
+        .dropdown-content { display: none; position: absolute; background: #fff; min-width: 200px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); border-radius: 8px; z-index: 10; padding: 8px 0; }
+        .dropdown-content button { display: block; width: 100%; padding: 10px 16px; border: none; background: transparent; text-align: left; cursor: pointer; font-size: 0.95rem; color: #2c3e50; }
+        .dropdown-content button:hover { background: #f0f3f7; }
+        .dropdown.show .dropdown-content { display: block; }
+
+        .painel-gerenciamento { background: #f0f3f7; border-radius: 16px; padding: 20px; margin: 20px 0; border: 2px solid #8e44ad; display: none; }
+        .painel-gerenciamento.ativo { display: block; }
+        .painel-gerenciamento .area-cadastro { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
+        .painel-gerenciamento .area-cadastro input, .painel-gerenciamento .area-cadastro select { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 8px; min-width: 120px; }
+        .painel-gerenciamento .area-cadastro button { background: #2ecc71; border: none; padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .painel-gerenciamento .area-cadastro button:hover { background: #27ae60; }
+        .painel-gerenciamento .busca input { width: 100%; padding: 10px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; }
+        .lista-plantel { background: #fff; padding: 10px; border-radius: 8px; max-height: 300px; overflow-y: auto; }
+        .plantel-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #e0e0e0; flex-wrap: wrap; }
+        .plantel-item .nome-area { display: flex; align-items: center; gap: 6px; flex: 2; min-width: 120px; }
+        .plantel-item .nome-area .nome { font-weight: 500; padding: 2px 6px; border-radius: 4px; min-width: 60px; }
+        .plantel-item .nome-area input[type="text"] { padding: 2px 6px; border: 2px solid #8e44ad; border-radius: 4px; font-weight: 500; font-size: 1rem; width: 150px; }
+        .plantel-item .controles { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .plantel-item .controles select { padding: 2px 6px; border-radius: 6px; border: 1px solid #ccc; }
+        .plantel-item .controles input[type="number"] { width: 50px; padding: 2px 6px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; }
+        .plantel-item .controles button { background: transparent; border: none; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 6px; font-size: 0.9rem; transition: 0.2s; }
+        .plantel-item .controles .btn-editar-nome { background: #8e44ad; color: #fff; }
+        .plantel-item .controles .btn-editar-nome:hover { background: #6c3483; }
+        .plantel-item .controles .btn-editar-nota { background: #f39c12; color: #fff; }
+        .plantel-item .controles .btn-editar-nota:hover { background: #d68910; }
+        .plantel-item .controles .btn-editar-capa { background: #2980b9; color: #fff; }
+        .plantel-item .controles .btn-editar-capa:hover { background: #1a5276; }
+        .plantel-item .controles .btn-editar-pontos { background: #27ae60; color: #fff; }
+        .plantel-item .controles .btn-editar-pontos:hover { background: #1e8449; }
+        .plantel-item .controles .btn-excluir { background: #e74c3c; color: #fff; }
+        .plantel-item .controles .btn-excluir:hover { background: #b03a2e; }
+        .plantel-item .controles .btn-cancelar { background: #95a5a6; color: #fff; }
+        .plantel-item .controles .btn-cancelar:hover { background: #7f8c8d; }
+        .plantel-item .controles .btn-salvar { background: #2ecc71; color: #fff; }
+        .plantel-item .controles .btn-salvar:hover { background: #27ae60; }
+        .sem-jogadores { color: #888; font-style: italic; padding: 10px; text-align: center; }
+
+        .ranking-capas { margin-top: 20px; padding-top: 15px; border-top: 2px solid #8e44ad; }
+        .ranking-capas h3 { color: #8e44ad; margin-top: 0; }
+
+        .ranking-pontos { margin-top: 20px; padding-top: 15px; border-top: 2px solid #27ae60; }
+        .ranking-pontos h3 { color: #27ae60; margin-top: 0; }
+
+        .acoes-plantel { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; align-items: center; }
+        .acoes-plantel .btn-pdf { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-pdf:hover { background: #b03a2e; }
+        .acoes-plantel .btn-pdf-pontos { background: #27ae60; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-pdf-pontos:hover { background: #1e8449; }
+        .acoes-plantel .btn-fechar { background: #95a5a6; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-fechar:hover { background: #7f8c8d; }
+
+        .area-partida { display: block; }
+        .area-partida.oculto { display: none; }
+        .area-partida .lista-jogadores { background: #f4f6f9; padding: 10px; border-radius: 8px; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        .jogador-item { display: flex; align-items: center; gap: 12px; padding: 4px 8px; border-bottom: 1px solid #ddd; }
+        .jogador-item label { flex: 1; cursor: pointer; }
+        .jogador-item .nota { font-weight: bold; margin-left: 10px; color: #2980b9; }
+
+        .busca-partida { margin-bottom: 10px; }
+        .busca-partida input { width: 100%; padding: 10px; border: 2px solid #ccc; border-radius: 8px; font-size: 1rem; }
+
+        .acoes-partida { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+        .acoes-partida button { background: #95a5a6; border: none; padding: 6px 16px; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        .acoes-partida button:hover { background: #7f8c8d; }
+
+        .info { font-size: 0.95rem; color: #2c3e50; margin: 5px 0 10px 0; }
+
+        .config { display: flex; align-items: center; gap: 20px; margin: 15px 0; flex-wrap: wrap; }
+        .config label { font-weight: bold; }
+        .config input { padding: 8px 15px; border-radius: 8px; border: 2px solid #ccc; width: 80px; }
+
+        .btn-sortear { background: #e67e22; border: none; padding: 15px 30px; border-radius: 12px; color: #fff; font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-sortear:hover { background: #d35400; }
+
+        .times-grid { margin-top: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .time-card { border-radius: 12px; padding: 15px; border-left: 6px solid #f39c12; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.3s, color 0.3s; background: #f8f9fa; color: #212529; }
+        .time-card .time-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+        .time-card .time-header .nome-time { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .time-card .time-header .nome-time h3 { margin: 0; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; flex: 1; color: inherit; }
+        .time-card .time-header .nome-time h3:hover { background: rgba(0,0,0,0.1); }
+        .time-card .time-header .pontos-header { font-size: 1.6rem; font-weight: bold; background: rgba(0,0,0,0.05); padding: 0 14px; border-radius: 8px; min-width: 60px; text-align: center; white-space: nowrap; color: inherit; }
+        .time-card ul { list-style: none; padding: 0; margin: 0 0 10px 0; }
+        .time-card ul li { padding: 4px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); display: flex; justify-content: space-between; color: inherit; }
+        .time-card ul li .nota { font-weight: bold; color: inherit; }
+        .time-card .soma-media { display: flex; justify-content: space-between; font-size: 0.9rem; margin: 6px 0; color: inherit; }
+        .placar-time { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 16px; margin-top: 8px; padding-top: 8px; border-top: 2px solid rgba(0,0,0,0.15); color: inherit; }
+        .placar-time .grupo { display: flex; align-items: center; gap: 6px; }
+        .placar-time .grupo span { font-weight: bold; min-width: 35px; text-align: left; font-size: 1rem; color: inherit; }
+        .placar-time button { background: #ecf0f1; border: none; border-radius: 6px; padding: 4px 10px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: 0.2s; color: #000; min-width: 30px; line-height: 1.2; }
+        .placar-time button:hover { background: #d5dbdb; }
+        .placar-time .btn-vitoria { background: #27ae60; color: #fff; }
+        .placar-time .btn-vitoria:hover { background: #1e8449; }
+        .placar-time .btn-empate { background: #f39c12; color: #fff; }
+        .placar-time .btn-empate:hover { background: #d68910; }
+        .placar-time .btn-diminuir { background: #e74c3c; color: #fff; padding: 4px 8px; }
+        .placar-time .btn-diminuir:hover { background: #b03a2e; }
+
+        .desequilibrio { text-align: center; margin: 15px 0 5px 0; font-weight: bold; color: #2c3e50; }
+        .footer-acoes { display: flex; justify-content: space-between; flex-wrap: wrap; margin-top: 15px; gap: 10px; }
+        .footer-acoes button { background: #7f8c8d; border: none; padding: 8px 20px; border-radius: 8px; color: #fff; cursor: pointer; font-weight: bold; }
+        .footer-acoes button:hover { background: #5d6d7e; }
+        .btn-finalizar { background: #8e44ad !important; }
+        .btn-finalizar:hover { background: #6c3483 !important; }
+        .distribuicao-info { text-align: center; margin: 10px 0; font-weight: bold; color: #2c3e50; }
+
+        #importInput { display: none; }
+
+        @media (max-width: 700px) {
+            .dropdown-content { left: 0; right: 0; }
+            .time-card .time-header { flex-wrap: wrap; }
+            .placar-time { flex-direction: column; align-items: stretch; }
+            .placar-time .grupo { justify-content: flex-start; }
+            .plantel-item { flex-direction: column; align-items: stretch; }
+            .plantel-item .nome-area { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <h1><span class="pomba">🕊️</span> Pelada da Paz</h1>
+
+        <!-- ===== MENU SUSPENSO ===== -->
+        <div class="dropdown" id="menuGerenciamento">
+            <button onclick="toggleDropdown()">⚙️ Opções ▼</button>
+            <div class="dropdown-content">
+                <button onclick="abrirGerenciamento(); fecharDropdown()">📋 Gerenciar Plantel</button>
+                <button onclick="exportarDados(); fecharDropdown()">📤 Exportar TXT</button>
+                <button onclick="document.getElementById('importInput').click(); fecharDropdown()">📥 Importar TXT</button>
+            </div>
+        </div>
+
+        <!-- ===== PAINEL DE GERENCIAMENTO ===== -->
+        <div class="painel-gerenciamento" id="painelGerenciamento">
+            <h2 style="margin-top:0; color:#8e44ad;">📋 Gerenciar Plantel</h2>
+
+            <div class="area-cadastro">
+                <input type="text" id="novoNome" placeholder="Nome do jogador">
+                <select id="novaNota">
+                    <option value="0">0</option><option value="0.5">0.5</option>
+                    <option value="1">1</option><option value="1.5">1.5</option>
+                    <option value="2">2</option><option value="2.5">2.5</option>
+                    <option value="3">3</option><option value="3.5">3.5</option>
+                    <option value="4">4</option><option value="4.5">4.5</option>
+                    <option value="5" selected>5</option>
+                    <option value="5.5">5.5</option><option value="6">6</option>
+                    <option value="6.5">6.5</option><option value="7">7</option>
+                    <option value="7.5">7.5</option><option value="8">8</option>
+                    <option value="8.5">8.5</option><option value="9">9</option>
+                    <option value="9.5">9.5</option><option value="10">10</option>
+                </select>
+                <button onclick="adicionarJogadorPlantel()">➕ Adicionar</button>
+            </div>
+
+            <div class="busca">
+                <input type="text" id="buscaPlantel" placeholder="🔍 Buscar jogador no plantel..." oninput="renderizarPlantel()">
+            </div>
+
+            <div class="lista-plantel" id="listaPlantel">
+                <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
+            </div>
+
+            <!-- ===== RANKING DE CAPAS ===== -->
+            <div class="ranking-capas" id="rankingCapas">
+                <h3>🏆 Ranking de Capas</h3>
+                <div id="listaRankingCapas" class="lista-plantel">
+                    <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
+                </div>
+            </div>
+
+            <!-- ===== RANKING DE PONTOS ===== -->
+            <div class="ranking-pontos" id="rankingPontos">
+                <h3>⭐ Ranking de Pontos</h3>
+                <div id="listaRankingPontos" class="lista-plantel">
+                    <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
+                </div>
+            </div>
+
+            <div class="acoes-plantel">
+                <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar PDF (Geral)</button>
+                <button class="btn-pdf-pontos" onclick="exportarPDFPontos()">📊 Exportar PDF (Pontos)</button>
+                <button class="btn-fechar" onclick="fecharGerenciamento()">✖ Fechar Plantel</button>
+            </div>
+        </div>
+
+        <!-- ===== ÁREA DE PARTIDA ===== -->
+        <div class="area-partida" id="areaPartida">
+
+            <div class="busca-partida">
+                <input type="text" id="buscaPartida" placeholder="🔍 Buscar jogador para selecionar..." oninput="renderizarSorteio()">
+            </div>
+
+            <div class="lista-jogadores" id="listaSorteio">
+                <em style="color: #888;">Nenhum jogador cadastrado.</em>
+            </div>
+            <div class="info" id="infoSelecionados">Nenhum jogador selecionado.</div>
+
+            <div class="acoes-partida">
+                <button onclick="selecionarTodos(true)">✅ Selecionar todos</button>
+                <button onclick="selecionarTodos(false)">❌ Desmarcar todos</button>
+            </div>
+
+            <div class="config">
+                <label for="tamanhoDesejado">Quantos jogadores por time (N)?</label>
+                <input type="number" id="tamanhoDesejado" value="4" min="3" step="1">
+                <span style="font-size:0.9rem; color:#555;">(Serão formados times com N e N−1 jogadores)</span>
+            </div>
+
+            <button class="btn-sortear" onclick="sortearTimes()">🎲 Sortear Times</button>
+
+            <div id="resultado" style="margin-top: 20px;"></div>
+
+            <!-- Botões de ação -->
+            <div class="footer-acoes">
+                <button onclick="zerarTodosPlacares()">🔄 Zerar placares</button>
+                <button onclick="zerarTudo()">🗑️ Zerar tudo</button>
+                <button class="btn-finalizar" onclick="finalizarPelada()">🏁 Finalizar Pelada</button>
+            </div>
+        </div>
+
+        <input type="file" id="importInput" accept=".txt" onchange="importarDados(event)">
+
+    </div>
+
+    <script>
+        // ============================================================
+        //  DICIONÁRIO DE CORES
+        // ============================================================
+        const coresPortugues = {
+            'vermelho': 'red', 'azul': 'blue', 'verde': 'green', 'amarelo': 'yellow',
+            'roxo': 'purple', 'laranja': 'orange', 'rosa': 'pink', 'marrom': 'brown',
+            'preto': 'black', 'branco': 'white', 'cinza': 'gray', 'ciano': 'cyan',
+            'magenta': 'magenta', 'limão': 'lime', 'oliva': 'olive', 'vinho': 'maroon',
+            'marinho': 'navy', 'turquesa': 'turquoise', 'violeta': 'violet', 'ouro': 'gold',
+            'prata': 'silver', 'coral': 'coral', 'salmão': 'salmon', 'pêssego': 'peachpuff',
+            'lavanda': 'lavender', 'menta': 'mintcream'
+        };
+
+        function traduzirCor(nome) {
+            const chave = nome.trim().toLowerCase();
+            return coresPortugues[chave] || chave;
+        }
+
+        // ============================================================
+        //  DADOS GLOBAIS
+        // ============================================================
+        let jogadores = [];
+        let timesAtuais = [];
+        let modoGerenciamento = false;
+
+        // ============================================================
+        //  PERSISTÊNCIA
+        // ============================================================
+        function salvarJogadores() {
+            localStorage.setItem('plantel', JSON.stringify(jogadores));
+        }
+
+        function carregarJogadores() {
+            const dados = localStorage.getItem('plantel');
+            if (dados) {
+                try {
+                    jogadores = JSON.parse(dados);
+                    jogadores.forEach(j => {
+                        if (j.selecionado === undefined) j.selecionado = true;
+                        j.editandoNome = false;
+                        j.editandoNota = false;
+                        j.editandoCapa = false;
+                        j.editandoPontos = false;
+                        if (j.pontosCapa === undefined) j.pontosCapa = 0;
+                        if (j.pontosJogador === undefined) j.pontosJogador = 0;
+                    });
+                } catch (e) {
+                    jogadores = [];
+                }
+            } else {
+                jogadores = [];
+            }
+            atualizarTodasListas();
+        }
+
+        // ============================================================
+        //  MENU DROPDOWN
+        // ============================================================
+        function toggleDropdown() {
+            document.getElementById('menuGerenciamento').classList.toggle('show');
+        }
+        window.addEventListener('click', function(e) {
+            if (!e.target.matches('#menuGerenciamento button')) {
+                const dropdowns = document.getElementsByClassName('dropdown-content');
+                for (let d of dropdowns) {
+                    d.parentElement.classList.remove('show');
+                }
+            }
+        });
+
+        function fecharDropdown() {
+            document.getElementById('menuGerenciamento').classList.remove('show');
+        }
+
+        // ============================================================
+        //  ABRIR / FECHAR GERENCIAMENTO
+        // ============================================================
+        function abrirGerenciamento() {
+            modoGerenciamento = true;
+            document.getElementById('painelGerenciamento').classList.add('ativo');
+            document.getElementById('areaPartida').classList.add('oculto');
+            renderizarPlantel();
+            renderizarRankingCapas();
+            renderizarRankingPontos();
+        }
+
+        function fecharGerenciamento() {
+            modoGerenciamento = false;
+            document.getElementById('painelGerenciamento').classList.remove('ativo');
+            document.getElementById('areaPartida').classList.remove('oculto');
+        }
+
+        // ============================================================
+        //  EXPORTAR / IMPORTAR (TXT)
+        // ============================================================
+        function exportarDados() {
+            if (jogadores.length === 0) {
+                alert('Não há dados para exportar.');
+                return;
+            }
+            let linhas = [];
+            for (let j of jogadores) {
+                const selecionado = j.selecionado ? 'true' : 'false';
+                linhas.push(`${j.nome};${j.nota};${j.pontosCapa || 0};${j.pontosJogador || 0};${selecionado}`);
+            }
+            const conteudo = linhas.join('\n');
+            const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'plantel.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importarDados(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const texto = e.target.result;
+                    const linhas = texto.split('\n').filter(line => line.trim() !== '');
+                    const novosJogadores = [];
+                    for (let line of linhas) {
+                        const partes = line.split(';').map(s => s.trim());
+                        if (partes.length < 2) continue;
+                        const nome = partes[0];
+                        const nota = parseFloat(partes[1]);
+                        if (isNaN(nota) || nota < 0 || nota > 10) continue;
+                        let pontosCapa = 0;
+                        if (partes.length >= 3) {
+                            pontosCapa = parseFloat(partes[2]) || 0;
+                        }
+                        let pontosJogador = 0;
+                        if (partes.length >= 4) {
+                            pontosJogador = parseFloat(partes[3]) || 0;
+                        }
+                        let selecionado = true;
+                        if (partes.length >= 5) {
+                            selecionado = (partes[4].toLowerCase() === 'true');
+                        } else if (partes.length >= 4) {
+                            const v = partes[3].toLowerCase();
+                            if (v === 'true' || v === 'false') {
+                                selecionado = (v === 'true');
+                                pontosJogador = 0;
+                            }
+                        }
+                        novosJogadores.push({ nome, nota, pontosCapa, pontosJogador, selecionado, editandoNome: false, editandoNota: false, editandoCapa: false, editandoPontos: false });
+                    }
+                    if (novosJogadores.length === 0) {
+                        alert('Nenhum jogador válido encontrado no arquivo.');
+                        return;
+                    }
+                    if (jogadores.length > 0) {
+                        if (!confirm(`O plantel atual (${jogadores.length} jogadores) será substituído pelo importado (${novosJogadores.length} jogadores). Continuar?`)) {
+                            return;
+                        }
+                    }
+                    jogadores = novosJogadores;
+                    jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
+                    salvarJogadores();
+                    atualizarTodasListas();
+                    if (modoGerenciamento) {
+                        renderizarPlantel();
+                        renderizarRankingCapas();
+                        renderizarRankingPontos();
+                    }
+                    alert(`Dados importados com sucesso! ${jogadores.length} jogadores carregados.`);
+                } catch (err) {
+                    alert('Erro ao ler o arquivo: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ============================================================
+        //  EXPORTAR PDF (RANKING DE NOTAS + CAPAS)
+        // ============================================================
+        function exportarPDF() {
+            if (jogadores.length === 0) {
+                alert('Não há jogadores para exportar.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('portrait', 'pt', 'a4');
+
+            doc.setFontSize(20);
+            doc.text('Rankings - Pelada da Paz', 40, 40);
+
+            const rankingNotas = [...jogadores].sort((a, b) => {
+                if (b.nota !== a.nota) return b.nota - a.nota;
+                return (b.pontosCapa || 0) - (a.pontosCapa || 0);
+            });
+
+            const dadosNotas = rankingNotas.map((j, i) => ({
+                posicao: i + 1,
+                nome: j.nome,
+                nota: j.nota,
+                capas: j.pontosCapa || 0
+            }));
+
+            const rankingCapas = [...jogadores].sort((a, b) => {
+                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
+                return a.nome.localeCompare(b.nome);
+            });
+
+            const dadosCapas = rankingCapas.map((j, i) => ({
+                posicao: i + 1,
+                nome: j.nome,
+                capas: j.pontosCapa || 0
+            }));
+
+            const marginLeft = 30;
+            const marginRight = 30;
+            const marginTop = 60;
+            const maxLinhas = Math.max(dadosNotas.length, dadosCapas.length);
+
+            const body = [];
+            for (let i = 0; i < maxLinhas; i++) {
+                const nota = dadosNotas[i] || { posicao: '', nome: '', nota: '', capas: '' };
+                const capa = dadosCapas[i] || { posicao: '', nome: '', capas: '' };
+                body.push([
+                    nota.posicao ? nota.posicao + '°' : '',
+                    nota.nome,
+                    nota.nota !== '' ? nota.nota : '',
+                    nota.capas !== '' ? nota.capas : '',
+                    '',
+                    capa.posicao ? capa.posicao + '°' : '',
+                    capa.nome,
+                    capa.capas !== '' ? capa.capas : ''
+                ]);
+            }
+
+            const colunas = {
+                0: { cellWidth: 35, halign: 'center' },
+                1: { cellWidth: 145 },
+                2: { cellWidth: 30, halign: 'center' },
+                3: { cellWidth: 40, halign: 'center' },
+                4: { cellWidth: 50, halign: 'center' },
+                5: { cellWidth: 35, halign: 'center' },
+                6: { cellWidth: 145 },
+                7: { cellWidth: 40, halign: 'center' }
+            };
+
+            const posXCapas = marginLeft + 35 + 145 + 30 + 40 + 50 + 35;
+
+            doc.setFontSize(12);
+            doc.text('Ranking de Notas', marginLeft, marginTop);
+            doc.text('Ranking de Capas', posXCapas, marginTop);
+
+            const table = {
+                startY: marginTop + 10,
+                head: [
+                    ['Pos.', 'Nome', 'Nota', 'Capas', '', 'Pos.', 'Nome', 'Capas']
+                ],
+                body: body,
+                theme: 'striped',
+                headStyles: { fontSize: 9, halign: 'center', fillColor: '#8e44ad', textColor: '#fff' },
+                bodyStyles: { fontSize: 8 },
+                columnStyles: colunas,
+                margin: { left: marginLeft, right: marginRight },
+                didParseCell: function(data) {
+                    if (data.section === 'head') {
+                        if (data.column.index >= 0 && data.column.index <= 3) {
+                            data.cell.styles.fillColor = '#8e44ad';
+                            data.cell.styles.textColor = '#ffffff';
+                        } else if (data.column.index === 4) {
+                            data.cell.styles.fillColor = '#ffffff';
+                            data.cell.styles.textColor = '#cccccc';
+                        } else if (data.column.index >= 5 && data.column.index <= 7) {
+                            data.cell.styles.fillColor = '#2980b9';
+                            data.cell.styles.textColor = '#ffffff';
+                        }
+                    }
+                    if (data.section === 'body' && data.column.index === 4) {
+                        data.cell.styles.fillColor = '#ffffff';
+                    }
+                }
+            };
+
+            doc.autoTable(table);
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.text(`Pelada da Paz - Página ${i} de ${pageCount}`, 30, doc.internal.pageSize.height - 20);
+            }
+
+            doc.save('ranking_pelada_da_paz.pdf');
+        }
+
+        // ============================================================
+        //  EXPORTAR PDF (RANKING DE PONTOS) - PDF SEPARADO
+        // ============================================================
+        function exportarPDFPontos() {
+            if (jogadores.length === 0) {
+                alert('Não há jogadores para exportar.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('portrait', 'pt', 'a4');
+
+            doc.setFontSize(20);
+            doc.text('Ranking de Pontos - Pelada da Paz', 40, 40);
+
+            const rankingPontos = [...jogadores].sort((a, b) => {
+                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) {
+                    return (b.pontosJogador || 0) - (a.pontosJogador || 0);
+                }
+                return a.nome.localeCompare(b.nome);
+            });
+
+            const body = rankingPontos.map((j, i) => [
+                i + 1 + '°',
+                j.nome,
+                j.pontosJogador || 0
+            ]);
+
+            const table = {
+                startY: 60,
+                head: [['Pos.', 'Nome', 'Pontos']],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: '#27ae60', textColor: '#fff', fontSize: 11 },
+                bodyStyles: { fontSize: 10 },
+                columnStyles: {
+                    0: { cellWidth: 50, halign: 'center' },
+                    1: { cellWidth: 350 },
+                    2: { cellWidth: 100, halign: 'center' }
+                },
+                margin: { left: 40, right: 40 }
+            };
+
+            doc.autoTable(table);
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.text(`Pelada da Paz - Página ${i} de ${pageCount}`, 40, doc.internal.pageSize.height - 20);
+            }
+
+            doc.save('ranking_pontos_pelada_da_paz.pdf');
+        }
+
+        // ============================================================
+        //  CRUD JOGADORES
+        // ============================================================
+        function adicionarJogadorPlantel() {
+            const nomeInput = document.getElementById('novoNome');
+            const notaSelect = document.getElementById('novaNota');
+            const nome = nomeInput.value.trim();
+            const nota = parseFloat(notaSelect.value);
+            if (nome === '') {
+                alert('Digite o nome do jogador.');
+                return;
+            }
+            if (jogadores.some(j => j.nome.toLowerCase() === nome.toLowerCase())) {
+                alert('Jogador já cadastrado.');
+                return;
+            }
+            jogadores.push({ nome, nota, pontosCapa: 0, pontosJogador: 0, selecionado: true, editandoNome: false, editandoNota: false, editandoCapa: false, editandoPontos: false });
+            nomeInput.value = '';
+            jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
+            salvarJogadores();
+            atualizarTodasListas();
+            if (modoGerenciamento) {
+                renderizarPlantel();
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+        }
+
+        function removerJogadorPlantel(index) {
+            if (!confirm('Remover este jogador do plantel?')) return;
+            jogadores.splice(index, 1);
+            salvarJogadores();
+            atualizarTodasListas();
+            if (modoGerenciamento) {
+                renderizarPlantel();
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+            if (timesAtuais.length > 0) {
+                timesAtuais = timesAtuais.map(time => {
+                    time.jogadores = time.jogadores.filter(j => jogadores.some(p => p.nome === j.nome));
+                    return time;
+                }).filter(time => time.jogadores.length > 0);
+                if (timesAtuais.length === 0) document.getElementById('resultado').innerHTML = '';
+            }
+        }
+
+        // ===== EDIÇÃO DE NOME =====
+        function iniciarEdicaoNome(index) {
+            jogadores[index].editandoNome = true;
+            renderizarPlantel();
+        }
+
+        function salvarEdicaoNome(index) {
+            const input = document.getElementById(`editNomePlantel-${index}`);
+            if (!input) return;
+            const novoNome = input.value.trim();
+            if (novoNome === '') {
+                alert('O nome não pode ficar vazio.');
+                return;
+            }
+            const duplicado = jogadores.some((j, i) => i !== index && j.nome.toLowerCase() === novoNome.toLowerCase());
+            if (duplicado) {
+                alert('Já existe um jogador com este nome.');
+                return;
+            }
+            jogadores[index].nome = novoNome;
+            jogadores[index].editandoNome = false;
+            jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
+            salvarJogadores();
+            atualizarTodasListas();
+            if (modoGerenciamento) {
+                renderizarPlantel();
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+            if (timesAtuais.length > 0) {
+                timesAtuais.forEach(time => {
+                    time.jogadores.forEach(j => {
+                        const encontrado = jogadores.find(p => p.nome === j.nome);
+                        if (encontrado) j.nome = encontrado.nome;
+                    });
+                });
+                const times = timesAtuais.map(t => t.jogadores);
+                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
+                const medias = times.map(t => {
+                    const soma = t.reduce((acc, j) => acc + j.nota, 0);
+                    return soma / t.length;
+                });
+                const tamanhos = times.map(t => t.length);
+                exibirTimes(times, somas, medias, tamanhos);
+            }
+        }
+
+        function cancelarEdicaoNome(index) {
+            jogadores[index].editandoNome = false;
+            renderizarPlantel();
+        }
+
+        // ===== EDIÇÃO DE NOTA =====
+        function iniciarEdicaoNota(index) {
+            jogadores[index].editandoNota = true;
+            renderizarPlantel();
+        }
+
+        function salvarEdicaoNota(index) {
+            const select = document.getElementById(`editNotaPlantel-${index}`);
+            if (!select) return;
+            const novaNota = parseFloat(select.value);
+            jogadores[index].nota = novaNota;
+            jogadores[index].editandoNota = false;
+            salvarJogadores();
+            atualizarTodasListas();
+            if (modoGerenciamento) {
+                renderizarPlantel();
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+            if (timesAtuais.length > 0) {
+                timesAtuais.forEach(time => {
+                    time.jogadores.forEach(j => {
+                        const encontrado = jogadores.find(p => p.nome === j.nome);
+                        if (encontrado) j.nota = encontrado.nota;
+                    });
+                });
+                const times = timesAtuais.map(t => t.jogadores);
+                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
+                const medias = times.map(t => {
+                    const soma = t.reduce((acc, j) => acc + j.nota, 0);
+                    return soma / t.length;
+                });
+                const tamanhos = times.map(t => t.length);
+                exibirTimes(times, somas, medias, tamanhos);
+            }
+        }
+
+        function cancelarEdicaoNota(index) {
+            jogadores[index].editandoNota = false;
+            renderizarPlantel();
+        }
+
+        // ===== EDIÇÃO DE PONTOS CAPA =====
+        function iniciarEdicaoCapa(index) {
+            jogadores[index].editandoCapa = true;
+            renderizarRankingCapas();
+        }
+
+        function salvarEdicaoCapa(index) {
+            const input = document.getElementById(`editCapaPlantel-${index}`);
+            if (!input) return;
+            let valor = parseFloat(input.value);
+            if (isNaN(valor) || valor < 0) {
+                alert('Digite um valor numérico válido (0 ou maior).');
+                return;
+            }
+            valor = Math.round(valor * 10) / 10;
+            jogadores[index].pontosCapa = valor;
+            jogadores[index].editandoCapa = false;
+            salvarJogadores();
+            renderizarRankingCapas();
+        }
+
+        function cancelarEdicaoCapa(index) {
+            jogadores[index].editandoCapa = false;
+            renderizarRankingCapas();
+        }
+
+        // ===== EDIÇÃO DE PONTOS DO JOGADOR (RANKING DE PONTOS) =====
+        function iniciarEdicaoPontos(index) {
+            jogadores[index].editandoPontos = true;
+            renderizarRankingPontos();
+        }
+
+        function salvarEdicaoPontos(index) {
+            const input = document.getElementById(`editPontosPlantel-${index}`);
+            if (!input) return;
+            let valor = parseFloat(input.value);
+            if (isNaN(valor)) {
+                alert('Digite um valor numérico válido.');
+                return;
+            }
+            jogadores[index].pontosJogador = valor;
+            jogadores[index].editandoPontos = false;
+            salvarJogadores();
+            renderizarRankingPontos();
+        }
+
+        function cancelarEdicaoPontos(index) {
+            jogadores[index].editandoPontos = false;
+            renderizarRankingPontos();
+        }
+
+        // ============================================================
+        //  RENDERIZAÇÃO
+        // ============================================================
+        function renderizarPlantel() {
+            const container = document.getElementById('listaPlantel');
+            const busca = document.getElementById('buscaPlantel').value.toLowerCase().trim();
+            const filtrados = jogadores.filter(j => j.nome.toLowerCase().includes(busca));
+            if (filtrados.length === 0) {
+                container.innerHTML = '<div class="sem-jogadores">Nenhum jogador encontrado.</div>';
+                return;
+            }
+            let html = '';
+            filtrados.forEach((j, i) => {
+                const idxGlobal = jogadores.indexOf(j);
+                const editandoNome = j.editandoNome || false;
+                const editandoNota = j.editandoNota || false;
+
+                html += `<div class="plantel-item" id="plantel-item-${idxGlobal}">`;
+                html += `<div class="nome-area">`;
+                if (editandoNome) {
+                    html += `<input type="text" id="editNomePlantel-${idxGlobal}" value="${j.nome}" placeholder="Nome">`;
+                    html += `<button class="btn-salvar" onclick="salvarEdicaoNome(${idxGlobal})">💾</button>`;
+                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoNome(${idxGlobal})">✖</button>`;
+                } else {
+                    html += `<span class="nome">${j.nome}</span>`;
+                    html += `<button class="btn-editar-nome" onclick="iniciarEdicaoNome(${idxGlobal})">✏️</button>`;
+                }
+                html += `</div>`;
+                html += `<div class="controles">`;
+                if (editandoNota) {
+                    const opcoes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+                    let selectHTML = `<select id="editNotaPlantel-${idxGlobal}">`;
+                    opcoes.forEach(v => {
+                        const selected = (v === j.nota) ? 'selected' : '';
+                        selectHTML += `<option value="${v}" ${selected}>${v}</option>`;
+                    });
+                    selectHTML += `</select>`;
+                    html += selectHTML;
+                    html += `<button class="btn-salvar" onclick="salvarEdicaoNota(${idxGlobal})">💾</button>`;
+                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoNota(${idxGlobal})">✖</button>`;
+                } else {
+                    html += `<span style="font-weight:bold; color:#2980b9;">${j.nota}</span>`;
+                    html += `<button class="btn-editar-nota" onclick="iniciarEdicaoNota(${idxGlobal})">✏️</button>`;
+                }
+                html += `<button class="btn-excluir" onclick="removerJogadorPlantel(${idxGlobal})">🗑️</button>`;
+                html += `</div>`;
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderizarRankingCapas() {
+            const container = document.getElementById('listaRankingCapas');
+            if (jogadores.length === 0) {
+                container.innerHTML = '<div class="sem-jogadores">Nenhum jogador cadastrado.</div>';
+                return;
+            }
+
+            const ranking = [...jogadores].sort((a, b) => {
+                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
+                return a.nome.localeCompare(b.nome);
+            });
+
+            let html = '';
+            ranking.forEach((j, i) => {
+                const idxGlobal = jogadores.indexOf(j);
+                const editando = j.editandoCapa || false;
+                html += `<div class="plantel-item" id="capa-item-${idxGlobal}">`;
+                html += `<div class="nome-area">`;
+                html += `<span class="nome">${j.nome}</span>`;
+                html += `</div>`;
+                html += `<div class="controles">`;
+                if (editando) {
+                    html += `<input type="number" id="editCapaPlantel-${idxGlobal}" value="${j.pontosCapa || 0}" step="0.5" min="0">`;
+                    html += `<button class="btn-salvar" onclick="salvarEdicaoCapa(${idxGlobal})">💾</button>`;
+                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoCapa(${idxGlobal})">✖</button>`;
+                } else {
+                    html += `<span style="font-weight:bold; color:#2980b9;">${j.pontosCapa || 0}</span>`;
+                    html += `<button class="btn-editar-capa" onclick="iniciarEdicaoCapa(${idxGlobal})">✏️</button>`;
+                }
+                html += `</div>`;
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderizarRankingPontos() {
+            const container = document.getElementById('listaRankingPontos');
+            if (jogadores.length === 0) {
+                container.innerHTML = '<div class="sem-jogadores">Nenhum jogador cadastrado.</div>';
+                return;
+            }
+
+            const ranking = [...jogadores].sort((a, b) => {
+                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) {
+                    return (b.pontosJogador || 0) - (a.pontosJogador || 0);
+                }
+                return a.nome.localeCompare(b.nome);
+            });
+
+            let html = '';
+            ranking.forEach((j, i) => {
+                const idxGlobal = jogadores.indexOf(j);
+                const editando = j.editandoPontos || false;
+                html += `<div class="plantel-item" id="pontos-item-${idxGlobal}">`;
+                html += `<div class="nome-area">`;
+                html += `<span class="nome">${j.nome}</span>`;
+                html += `</div>`;
+                html += `<div class="controles">`;
+                if (editando) {
+                    html += `<input type="number" id="editPontosPlantel-${idxGlobal}" value="${j.pontosJogador || 0}" step="1">`;
+                    html += `<button class="btn-salvar" onclick="salvarEdicaoPontos(${idxGlobal})">💾</button>`;
+                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoPontos(${idxGlobal})">✖</button>`;
+                } else {
+                    html += `<span style="font-weight:bold; color:#27ae60;">${j.pontosJogador || 0}</span>`;
+                    html += `<button class="btn-editar-pontos" onclick="iniciarEdicaoPontos(${idxGlobal})">✏️</button>`;
+                }
+                html += `</div>`;
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderizarSorteio() {
+            const div = document.getElementById('listaSorteio');
+            const info = document.getElementById('infoSelecionados');
+            const busca = document.getElementById('buscaPartida').value.toLowerCase().trim();
+
+            if (jogadores.length === 0) {
+                div.innerHTML = '<em style="color: #888;">Nenhum jogador cadastrado.</em>';
+                info.innerText = 'Nenhum jogador selecionado.';
+                return;
+            }
+
+            const filtrados = jogadores.filter(j => j.nome.toLowerCase().includes(busca));
+
+            let html = '';
+            filtrados.forEach((j, i) => {
+                const idxGlobal = jogadores.indexOf(j);
+                html += `
+                    <div class="jogador-item">
+                        <input type="checkbox" ${j.selecionado ? 'checked' : ''} onchange="toggleSelecionado(${idxGlobal})">
+                        <label onclick="toggleSelecionado(${idxGlobal})">
+                            ${j.nome} <span class="nota" style="color:#2980b9;">${j.nota}</span>
+                        </label>
+                    </div>
+                `;
+            });
+            div.innerHTML = html;
+
+            const selecionados = jogadores.filter(j => j.selecionado);
+            info.innerText = `📌 ${selecionados.length} jogador(es) selecionado(s) para o sorteio.`;
+            if (selecionados.length === 0) info.innerText = 'Nenhum jogador selecionado.';
+        }
+
+        function atualizarTodasListas() {
+            renderizarSorteio();
+            if (modoGerenciamento) {
+                renderizarPlantel();
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+        }
+
+        function selecionarTodos(valor) {
+            jogadores.forEach(j => j.selecionado = valor);
+            salvarJogadores();
+            renderizarSorteio();
+        }
+
+        function toggleSelecionado(index) {
+            jogadores[index].selecionado = !jogadores[index].selecionado;
+            salvarJogadores();
+            renderizarSorteio();
+        }
+
+        // ============================================================
+        //  SORTEIO
+        // ============================================================
+        function calcularDistribuicao(total, N) {
+            if (total < N - 1) return null;
+            let maxA = Math.floor(total / N);
+            for (let a = maxA; a >= 0; a--) {
+                let resto = total - a * N;
+                if (resto % (N - 1) === 0) {
+                    let b = resto / (N - 1);
+                    return { a, b };
+                }
+            }
+            return null;
+        }
+
+        function sortearTimes() {
+            const N = parseInt(document.getElementById('tamanhoDesejado').value);
+            if (isNaN(N) || N < 3) {
+                alert('Informe um número inteiro maior ou igual a 3.');
+                return;
+            }
+            const selecionados = jogadores.filter(j => j.selecionado);
+            const total = selecionados.length;
+            if (total === 0) {
+                alert('Marque pelo menos alguns jogadores para o sorteio.');
+                return;
+            }
+            const dist = calcularDistribuicao(total, N);
+            if (!dist) {
+                alert(`Não é possível formar times com ${N} e ${N-1} jogadores para um total de ${total} atletas. Tente outro valor de N.`);
+                return;
+            }
+            const { a, b } = dist;
+            const tamanhos = [];
+            for (let i = 0; i < a; i++) tamanhos.push(N);
+            for (let i = 0; i < b; i++) tamanhos.push(N - 1);
+
+            let melhorSorteio = null;
+            let menorDiferenca = Infinity;
+
+            for (let tentativa = 0; tentativa < 1000; tentativa++) {
+                const copia = [...selecionados];
+                for (let i = copia.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [copia[i], copia[j]] = [copia[j], copia[i]];
+                }
+                const times = [];
+                let idx = 0;
+                for (let t = 0; t < tamanhos.length; t++) {
+                    const size = tamanhos[t];
+                    times.push(copia.slice(idx, idx + size));
+                    idx += size;
+                }
+                const medias = times.map(time => {
+                    const soma = time.reduce((acc, j) => acc + j.nota, 0);
+                    return soma / time.length;
+                });
+                const diferenca = Math.max(...medias) - Math.min(...medias);
+                if (diferenca < menorDiferenca) {
+                    menorDiferenca = diferenca;
+                    const somas = times.map(time => time.reduce((acc, j) => acc + j.nota, 0));
+                    melhorSorteio = { times, somas, medias };
+                }
+                if (diferenca === 0) break;
+            }
+
+            timesAtuais = melhorSorteio.times.map((time, i) => ({
+                jogadores: time,
+                nome: `Time ${i + 1}`,
+                vitorias: 0,
+                empates: 0,
+                pontos: 0
+            }));
+
+            exibirTimes(melhorSorteio.times, melhorSorteio.somas, melhorSorteio.medias, tamanhos);
+        }
+
+        // ============================================================
+        //  FUNÇÕES DE COR
+        // ============================================================
+        function isValidColor(nomeCor) {
+            const corTraduzida = traduzirCor(nomeCor);
+            try {
+                const temp = document.createElement('div');
+                temp.style.color = corTraduzida;
+                return temp.style.color !== '';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function getContrastColor(nomeCor) {
+            const corTraduzida = traduzirCor(nomeCor);
+            const temp = document.createElement('div');
+            temp.style.color = corTraduzida;
+            document.body.appendChild(temp);
+            const computedColor = getComputedStyle(temp).color;
+            document.body.removeChild(temp);
+
+            const match = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (!match) return '#000000';
+
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return luminance > 0.5 ? '#000000' : '#ffffff';
+        }
+
+        // ============================================================
+        //  EXIBIR TIMES
+        // ============================================================
+        function exibirTimes(times, somas, medias, tamanhos) {
+            const div = document.getElementById('resultado');
+            let html = `<div class="distribuicao-info">Times formados: ${times.length} equipes (${tamanhos.map(t => t+' jog.').join(', ')})</div>`;
+            html += '<div class="times-grid">';
+
+            times.forEach((time, idx) => {
+                const timeData = timesAtuais[idx];
+                const nomeTime = timeData.nome || `Time ${idx + 1}`;
+                const corTraduzida = traduzirCor(nomeTime);
+                const corValida = isValidColor(corTraduzida) ? corTraduzida : '#f8f9fa';
+                const corTexto = getContrastColor(corValida);
+
+                html += `
+                    <div class="time-card" id="time-${idx}" style="background-color: ${corValida}; color: ${corTexto};">
+                        <div class="time-header">
+                            <div class="nome-time">
+                                <h3 onclick="editarNomeTime(${idx})" id="nome-time-${idx}">${nomeTime}</h3>
+                            </div>
+                            <div class="pontos-header">${timeData.pontos}</div>
+                        </div>
+                        <ul>
+                            ${time.map(j => `<li>${j.nome} <span class="nota">${j.nota}</span></li>`).join('')}
+                        </ul>
+                        <div class="soma-media">
+                            <span>Soma: ${somas[idx].toFixed(1)}</span>
+                            <span>Média: ${medias[idx].toFixed(2)}</span>
+                        </div>
+                        <div class="placar-time">
+                            <div class="grupo">
+                                <span class="v">Vit: ${timeData.vitorias}</span>
+                                <button class="btn-vitoria" onclick="alterarPlacar(${idx}, 'vitoria', 1)">+</button>
+                                <button class="btn-diminuir" onclick="alterarPlacar(${idx}, 'vitoria', -1)">-</button>
+                            </div>
+                            <div class="grupo">
+                                <span class="e">Emp: ${timeData.empates}</span>
+                                <button class="btn-empate" onclick="alterarPlacar(${idx}, 'empate', 1)">+</button>
+                                <button class="btn-diminuir" onclick="alterarPlacar(${idx}, 'empate', -1)">-</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            const diff = Math.max(...medias) - Math.min(...medias);
+            html += `<div class="desequilibrio">Desequilíbrio (diferença entre as médias): ${diff.toFixed(2)}</div>`;
+            div.innerHTML = html;
+        }
+
+        // ============================================================
+        //  EDITAR NOME DO TIME
+        // ============================================================
+        function editarNomeTime(idx) {
+            const timeData = timesAtuais[idx];
+            const nomeAtual = timeData.nome || `Time ${idx + 1}`;
+            const novoNome = prompt('Digite o novo nome do time (pode ser uma cor em português):', nomeAtual);
+            if (novoNome !== null && novoNome.trim() !== '') {
+                timeData.nome = novoNome.trim();
+                const nomeEl = document.getElementById(`nome-time-${idx}`);
+                if (nomeEl) nomeEl.innerText = timeData.nome;
+
+                const card = document.getElementById(`time-${idx}`);
+                const corTraduzida = traduzirCor(timeData.nome);
+                const corValida = isValidColor(corTraduzida) ? corTraduzida : '#f8f9fa';
+                const corTexto = getContrastColor(corValida);
+                if (card) {
+                    card.style.backgroundColor = corValida;
+                    card.style.color = corTexto;
+                }
+            }
+        }
+
+        // ============================================================
+        //  ALTERAR PLACAR (com acúmulo no Ranking de Pontos)
+        // ============================================================
+        function alterarPlacar(idx, tipo, delta) {
+            if (idx < 0 || idx >= timesAtuais.length) return;
+            const time = timesAtuais[idx];
+            let pontosDelta = 0;
+
+            if (tipo === 'vitoria') {
+                const nova = time.vitorias + delta;
+                if (nova < 0) {
+                    alert('Vitórias não podem ficar negativas.');
+                    return;
+                }
+                time.vitorias = nova;
+                pontosDelta = delta * 3;
+                time.pontos += pontosDelta;
+            } else if (tipo === 'empate') {
+                const nova = time.empates + delta;
+                if (nova < 0) {
+                    alert('Empates não podem ficar negativos.');
+                    return;
+                }
+                time.empates = nova;
+                pontosDelta = delta * 1;
+                time.pontos += pontosDelta;
+            }
+
+            if (pontosDelta !== 0) {
+                time.jogadores.forEach(jog => {
+                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
+                    if (idxPlantel !== -1) {
+                        jogadores[idxPlantel].pontosJogador = (jogadores[idxPlantel].pontosJogador || 0) + pontosDelta;
+                    }
+                });
+                salvarJogadores();
+                if (modoGerenciamento) renderizarRankingPontos();
+            }
+
+            const times = timesAtuais.map(t => t.jogadores);
+            const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
+            const medias = times.map(t => {
+                const soma = t.reduce((acc, j) => acc + j.nota, 0);
+                return soma / t.length;
+            });
+            const tamanhos = times.map(t => t.length);
+            exibirTimes(times, somas, medias, tamanhos);
+        }
+
+        // ============================================================
+        //  ZERAR PLACARES
+        // ============================================================
+        function zerarTodosPlacares() {
+            timesAtuais.forEach(time => {
+                time.vitorias = 0;
+                time.empates = 0;
+                time.pontos = 0;
+            });
+            if (timesAtuais.length > 0) {
+                const times = timesAtuais.map(t => t.jogadores);
+                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
+                const medias = times.map(t => {
+                    const soma = t.reduce((acc, j) => acc + j.nota, 0);
+                    return soma / t.length;
+                });
+                const tamanhos = times.map(t => t.length);
+                exibirTimes(times, somas, medias, tamanhos);
+            } else {
+                document.getElementById('resultado').innerHTML = '';
+            }
+        }
+
+        function zerarTudo() {
+            if (timesAtuais.length === 0) return;
+            if (!confirm('Zerar todos os placares e remover os times?')) return;
+            timesAtuais = [];
+            document.getElementById('resultado').innerHTML = '';
+        }
+
+        // ============================================================
+        //  FINALIZAR PELADA (COM PERGUNTA DE CONFIRMAÇÃO)
+        // ============================================================
+        function finalizarPelada() {
+            if (timesAtuais.length === 0) {
+                alert('Não há times formados. Sorteie os times primeiro.');
+                return;
+            }
+
+            // ===== PERGUNTA DE CONFIRMAÇÃO =====
+            const confirmar = confirm(
+                '⚠️ Deseja realmente finalizar a pelada?\n\n' +
+                '• Os placares dos times serão zerados.\n' +
+                '• As notas serão ajustadas (+0.5 campeão / -0.5 lanterna).\n' +
+                '• O Ranking de Capas será atualizado.\n\n' +
+                'Essa ação não pode ser desfeita.'
+            );
+            if (!confirmar) {
+                return;
+            }
+
+            const pontos = timesAtuais.map(t => t.pontos);
+            const maxPontos = Math.max(...pontos);
+            const minPontos = Math.min(...pontos);
+            const indicesMax = pontos.reduce((acc, p, i) => p === maxPontos ? [...acc, i] : acc, []);
+            const indicesMin = pontos.reduce((acc, p, i) => p === minPontos ? [...acc, i] : acc, []);
+
+            let mensagem = '';
+            let houveBonus = false;
+            let houvePenalidade = false;
+
+            // ---- TRATAMENTO DO PRIMEIRO LUGAR ----
+            if (indicesMax.length > 1) {
+                mensagem = '🏆 Houve empate no primeiro lugar. Nenhum time receberá bônus.\n';
+                indicesMax.forEach(idx => {
+                    const time = timesAtuais[idx];
+                    time.jogadores.forEach(jog => {
+                        const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
+                        if (idxPlantel !== -1) {
+                            jogadores[idxPlantel].pontosCapa = (jogadores[idxPlantel].pontosCapa || 0) + 0.5;
+                        }
+                    });
+                });
+                mensagem += '🏅 Times empatados em primeiro ganham 0.5 ponto no Ranking de Capas.\n';
+            } else {
+                const idxCampeao = indicesMax[0];
+                const timeCampeao = timesAtuais[idxCampeao];
+                timeCampeao.jogadores.forEach(jog => {
+                    let novaNota = Math.min(10, jog.nota + 0.5);
+                    jog.nota = parseFloat(novaNota.toFixed(1));
+                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
+                    if (idxPlantel !== -1) {
+                        jogadores[idxPlantel].nota = jog.nota;
+                    }
+                });
+                timeCampeao.jogadores.forEach(jog => {
+                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
+                    if (idxPlantel !== -1) {
+                        jogadores[idxPlantel].pontosCapa = (jogadores[idxPlantel].pontosCapa || 0) + 1;
+                    }
+                });
+                houveBonus = true;
+                mensagem = `🏆 Campeão: ${timeCampeao.nome || 'Time ' + (idxCampeao+1)} (${timeCampeao.pontos} pts) → +0.5 para cada jogador e +1 ponto no Ranking de Capas.\n`;
+            }
+
+            // ---- TRATAMENTO DO ÚLTIMO LUGAR ----
+            if (indicesMin.length > 1) {
+                mensagem += '📉 Houve empate no último lugar. Nenhum time será penalizado.';
+            } else {
+                const idxLanterna = indicesMin[0];
+                const timeLanterna = timesAtuais[idxLanterna];
+                timeLanterna.jogadores.forEach(jog => {
+                    let novaNota = Math.max(0, jog.nota - 0.5);
+                    jog.nota = parseFloat(novaNota.toFixed(1));
+                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
+                    if (idxPlantel !== -1) {
+                        jogadores[idxPlantel].nota = jog.nota;
+                    }
+                });
+                houvePenalidade = true;
+                mensagem += `📉 Lanterna: ${timeLanterna.nome || 'Time ' + (idxLanterna+1)} (${timeLanterna.pontos} pts) → -0.5 para cada jogador.`;
+            }
+
+            if (!houveBonus && !houvePenalidade) {
+                mensagem = '🏆 Houve empate no primeiro lugar e no último lugar. Nenhuma alteração de nota.';
+            } else if (!houveBonus) {
+                mensagem += '\n\nNão houve bônus (empate no primeiro lugar).';
+            } else if (!houvePenalidade) {
+                mensagem += '\n\nNão houve penalidade (empate no último lugar).';
+            }
+
+            salvarJogadores();
+            atualizarTodasListas();
+
+            timesAtuais.forEach(time => {
+                time.vitorias = 0;
+                time.empates = 0;
+                time.pontos = 0;
+            });
+
+            const times = timesAtuais.map(t => t.jogadores);
+            const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
+            const medias = times.map(t => {
+                const soma = t.reduce((acc, j) => acc + j.nota, 0);
+                return soma / t.length;
+            });
+            const tamanhos = times.map(t => t.length);
+            exibirTimes(times, somas, medias, tamanhos);
+
+            if (modoGerenciamento) {
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+            }
+
+            alert(mensagem + '\n\nPlacares zerados para uma nova rodada!');
+        }
+
+        // ============================================================
+        //  INICIALIZAÇÃO
+        // ============================================================
+        carregarJogadores();
+
+        document.getElementById('novoNome').addEventListener('keypress', e => {
+            if (e.key === 'Enter') adicionarJogadorPlantel();
+        });
+    </script>
+</body>
+</html>
