@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* ===== (todo o CSS permanece igual ao da versão anterior) ===== */
+        /* ===== (mesmo CSS da versão anterior) ===== */
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #1a2a3a; display: flex; justify-content: center; padding: 20px; }
         .container { background: #fff; max-width: 1100px; width: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -64,6 +64,8 @@
         .acoes-plantel .btn-pdf-pontos:hover { background: #1e8449; }
         .acoes-plantel .btn-fechar { background: #95a5a6; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
         .acoes-plantel .btn-fechar:hover { background: #7f8c8d; }
+        .acoes-plantel .btn-recalcular { background: #e67e22; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-recalcular:hover { background: #d35400; }
         .area-partida { display: block; }
         .area-partida.oculto { display: none; }
         .area-partida .lista-jogadores { background: #f4f6f9; padding: 10px; border-radius: 8px; margin: 15px 0; max-height: 200px; overflow-y: auto; }
@@ -174,6 +176,7 @@
             <div class="acoes-plantel">
                 <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar PDF (Geral)</button>
                 <button class="btn-pdf-pontos" onclick="exportarPDFPontos()">📊 Exportar PDF (Pontos)</button>
+                <button class="btn-recalcular" onclick="recalcularRankingPontos()" title="Útil se algo deu errado">🔄 Recalcular Ranking de Pontos</button>
                 <button class="btn-fechar" onclick="fecharGerenciamento()">✖ Fechar Plantel</button>
             </div>
         </div>
@@ -233,8 +236,14 @@
         let timesAtuais = [];
         let modoGerenciamento = false;
 
+        // Histórico de pontos acumulados por rodada (para recalcular)
+        // Cada entrada: { rodada: n, pontosPorJogador: { nome: pontos } }
+        let historicoPontos = [];
+        // Rodada atual: quando finalizar, guardamos
+        let rodadaAtual = 1;
+
         // ============================================================
-        //  PERSISTÊNCIA DO PLANTEL
+        //  PERSISTÊNCIA
         // ============================================================
         function salvarJogadores() {
             localStorage.setItem('plantel', JSON.stringify(jogadores));
@@ -263,9 +272,6 @@
             atualizarTodasListas();
         }
 
-        // ============================================================
-        //  PERSISTÊNCIA DOS TIMES (NOVO)
-        // ============================================================
         function salvarTimes() {
             try {
                 localStorage.setItem('timesAtuais', JSON.stringify(timesAtuais));
@@ -280,7 +286,6 @@
             try {
                 const salvos = JSON.parse(dados);
                 if (!Array.isArray(salvos) || salvos.length === 0) return;
-
                 timesAtuais = salvos.map(t => ({
                     nome: t.nome || 'Time',
                     vitorias: t.vitorias || 0,
@@ -291,18 +296,47 @@
                         return encontrado ? { ...encontrado } : j;
                     }).filter(j => j && j.nome)
                 })).filter(t => t.jogadores.length > 0);
-
                 if (timesAtuais.length === 0) return;
-
                 const times = timesAtuais.map(t => t.jogadores);
                 const somas = times.map(t => t.reduce((acc, j) => acc + (j.nota || 0), 0));
                 const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
                 exibirTimes(times, somas, medias, times.map(t => t.length));
-
-                console.log('Times restaurados do localStorage:', timesAtuais.length);
             } catch (e) {
                 console.warn('Erro ao restaurar times:', e);
                 localStorage.removeItem('timesAtuais');
+            }
+        }
+
+        // ============================================================
+        //  HISTÓRICO DE PONTOS (para recalcular)
+        // ============================================================
+        function salvarHistorico() {
+            localStorage.setItem('historicoPontos', JSON.stringify(historicoPontos));
+        }
+
+        function carregarHistorico() {
+            const dados = localStorage.getItem('historicoPontos');
+            if (dados) {
+                try {
+                    historicoPontos = JSON.parse(dados);
+                } catch (e) {
+                    historicoPontos = [];
+                }
+            } else {
+                historicoPontos = [];
+            }
+        }
+
+        function salvarRodadaAtual() {
+            localStorage.setItem('rodadaAtual', rodadaAtual.toString());
+        }
+
+        function carregarRodadaAtual() {
+            const dados = localStorage.getItem('rodadaAtual');
+            if (dados) {
+                rodadaAtual = parseInt(dados) || 1;
+            } else {
+                rodadaAtual = 1;
             }
         }
 
@@ -347,10 +381,7 @@
         //  EXPORTAR / IMPORTAR TXT
         // ============================================================
         function exportarDados() {
-            if (jogadores.length === 0) {
-                alert('Não há dados para exportar.');
-                return;
-            }
+            if (jogadores.length === 0) { alert('Não há dados para exportar.'); return; }
             let linhas = [];
             for (let j of jogadores) {
                 const selecionado = j.selecionado ? 'true' : 'false';
@@ -388,25 +419,12 @@
                         let pontosJogador = 0;
                         if (partes.length >= 4) pontosJogador = parseFloat(partes[3]) || 0;
                         let selecionado = true;
-                        if (partes.length >= 5) {
-                            selecionado = (partes[4].toLowerCase() === 'true');
-                        } else if (partes.length >= 4) {
-                            const v = partes[3].toLowerCase();
-                            if (v === 'true' || v === 'false') {
-                                selecionado = (v === 'true');
-                                pontosJogador = 0;
-                            }
-                        }
+                        if (partes.length >= 5) selecionado = (partes[4].toLowerCase() === 'true');
                         novosJogadores.push({ nome, nota, pontosCapa, pontosJogador, selecionado, editandoNome: false, editandoNota: false, editandoCapa: false, editandoPontos: false });
                     }
-                    if (novosJogadores.length === 0) {
-                        alert('Nenhum jogador válido encontrado no arquivo.');
-                        return;
-                    }
+                    if (novosJogadores.length === 0) { alert('Nenhum jogador válido encontrado no arquivo.'); return; }
                     if (jogadores.length > 0) {
-                        if (!confirm(`O plantel atual (${jogadores.length} jogadores) será substituído pelo importado (${novosJogadores.length} jogadores). Continuar?`)) {
-                            return;
-                        }
+                        if (!confirm(`O plantel atual (${jogadores.length} jogadores) será substituído pelo importado (${novosJogadores.length} jogadores). Continuar?`)) return;
                     }
                     jogadores = novosJogadores;
                     jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
@@ -438,718 +456,4 @@
 
             const rankingNotas = [...jogadores].sort((a, b) => {
                 if (b.nota !== a.nota) return b.nota - a.nota;
-                return (b.pontosCapa || 0) - (a.pontosCapa || 0);
-            });
-            const dadosNotas = rankingNotas.map((j, i) => ({ posicao: i + 1, nome: j.nome, nota: j.nota, capas: j.pontosCapa || 0 }));
-
-            const rankingCapas = [...jogadores].sort((a, b) => {
-                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
-                return a.nome.localeCompare(b.nome);
-            });
-            const dadosCapas = rankingCapas.map((j, i) => ({ posicao: i + 1, nome: j.nome, capas: j.pontosCapa || 0 }));
-
-            const marginLeft = 30, marginRight = 30, marginTop = 60;
-            const maxLinhas = Math.max(dadosNotas.length, dadosCapas.length);
-            const body = [];
-            for (let i = 0; i < maxLinhas; i++) {
-                const nota = dadosNotas[i] || { posicao: '', nome: '', nota: '', capas: '' };
-                const capa = dadosCapas[i] || { posicao: '', nome: '', capas: '' };
-                body.push([nota.posicao ? nota.posicao + '°' : '', nota.nome, nota.nota !== '' ? nota.nota : '', nota.capas !== '' ? nota.capas : '', '', capa.posicao ? capa.posicao + '°' : '', capa.nome, capa.capas !== '' ? capa.capas : '']);
-            }
-
-            const colunas = {
-                0: { cellWidth: 35, halign: 'center' }, 1: { cellWidth: 145 },
-                2: { cellWidth: 30, halign: 'center' }, 3: { cellWidth: 40, halign: 'center' },
-                4: { cellWidth: 50, halign: 'center' }, 5: { cellWidth: 35, halign: 'center' },
-                6: { cellWidth: 145 }, 7: { cellWidth: 40, halign: 'center' }
-            };
-            const posXCapas = marginLeft + 35 + 145 + 30 + 40 + 50 + 35;
-
-            doc.setFontSize(12);
-            doc.text('Ranking de Notas', marginLeft, marginTop);
-            doc.text('Ranking de Capas', posXCapas, marginTop);
-
-            doc.autoTable({
-                startY: marginTop + 10,
-                head: [['Pos.', 'Nome', 'Nota', 'Capas', '', 'Pos.', 'Nome', 'Capas']],
-                body: body,
-                theme: 'striped',
-                headStyles: { fontSize: 9, halign: 'center', fillColor: '#8e44ad', textColor: '#fff' },
-                bodyStyles: { fontSize: 8 },
-                columnStyles: colunas,
-                margin: { left: marginLeft, right: marginRight },
-                didParseCell: function(data) {
-                    if (data.section === 'head') {
-                        if (data.column.index >= 0 && data.column.index <= 3) { data.cell.styles.fillColor = '#8e44ad'; data.cell.styles.textColor = '#fff'; }
-                        else if (data.column.index === 4) { data.cell.styles.fillColor = '#fff'; data.cell.styles.textColor = '#ccc'; }
-                        else if (data.column.index >= 5 && data.column.index <= 7) { data.cell.styles.fillColor = '#2980b9'; data.cell.styles.textColor = '#fff'; }
-                    }
-                    if (data.section === 'body' && data.column.index === 4) data.cell.styles.fillColor = '#fff';
-                }
-            });
-
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i); doc.setFontSize(8);
-                doc.text(`Pelada da Paz - Página ${i} de ${pageCount}`, 30, doc.internal.pageSize.height - 20);
-            }
-            doc.save('ranking_pelada_da_paz.pdf');
-        }
-
-        // ============================================================
-        //  EXPORTAR PDF (RANKING DE PONTOS)
-        // ============================================================
-        function exportarPDFPontos() {
-            if (jogadores.length === 0) { alert('Não há jogadores para exportar.'); return; }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('portrait', 'pt', 'a4');
-            doc.setFontSize(20);
-            doc.text('Ranking de Pontos - Pelada da Paz', 40, 40);
-
-            const rankingPontos = [...jogadores].sort((a, b) => {
-                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) return (b.pontosJogador || 0) - (a.pontosJogador || 0);
-                return a.nome.localeCompare(b.nome);
-            });
-            const body = rankingPontos.map((j, i) => [i + 1 + '°', j.nome, j.pontosJogador || 0]);
-
-            doc.autoTable({
-                startY: 60,
-                head: [['Pos.', 'Nome', 'Pontos']],
-                body: body,
-                theme: 'striped',
-                headStyles: { fillColor: '#27ae60', textColor: '#fff', fontSize: 11 },
-                bodyStyles: { fontSize: 10 },
-                columnStyles: { 0: { cellWidth: 50, halign: 'center' }, 1: { cellWidth: 350 }, 2: { cellWidth: 100, halign: 'center' } },
-                margin: { left: 40, right: 40 }
-            });
-
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i); doc.setFontSize(8);
-                doc.text(`Pelada da Paz - Página ${i} de ${pageCount}`, 40, doc.internal.pageSize.height - 20);
-            }
-            doc.save('ranking_pontos_pelada_da_paz.pdf');
-        }
-
-        // ============================================================
-        //  CRUD JOGADORES
-        // ============================================================
-        function adicionarJogadorPlantel() {
-            const nomeInput = document.getElementById('novoNome');
-            const notaSelect = document.getElementById('novaNota');
-            const nome = nomeInput.value.trim();
-            const nota = parseFloat(notaSelect.value);
-            if (nome === '') { alert('Digite o nome do jogador.'); return; }
-            if (jogadores.some(j => j.nome.toLowerCase() === nome.toLowerCase())) { alert('Jogador já cadastrado.'); return; }
-            jogadores.push({ nome, nota, pontosCapa: 0, pontosJogador: 0, selecionado: true, editandoNome: false, editandoNota: false, editandoCapa: false, editandoPontos: false });
-            nomeInput.value = '';
-            jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
-            salvarJogadores();
-            atualizarTodasListas();
-            if (modoGerenciamento) { renderizarPlantel(); renderizarRankingCapas(); renderizarRankingPontos(); }
-        }
-
-        function removerJogadorPlantel(index) {
-            if (!confirm('Remover este jogador do plantel?')) return;
-            jogadores.splice(index, 1);
-            salvarJogadores();
-            atualizarTodasListas();
-            if (modoGerenciamento) { renderizarPlantel(); renderizarRankingCapas(); renderizarRankingPontos(); }
-            if (timesAtuais.length > 0) {
-                timesAtuais = timesAtuais.map(time => {
-                    time.jogadores = time.jogadores.filter(j => jogadores.some(p => p.nome === j.nome));
-                    return time;
-                }).filter(time => time.jogadores.length > 0);
-                if (timesAtuais.length === 0) document.getElementById('resultado').innerHTML = '';
-                salvarTimes();
-            }
-        }
-
-        function iniciarEdicaoNome(index) { jogadores[index].editandoNome = true; renderizarPlantel(); }
-        function salvarEdicaoNome(index) {
-            const input = document.getElementById(`editNomePlantel-${index}`);
-            if (!input) return;
-            const novoNome = input.value.trim();
-            if (novoNome === '') { alert('O nome não pode ficar vazio.'); return; }
-            const duplicado = jogadores.some((j, i) => i !== index && j.nome.toLowerCase() === novoNome.toLowerCase());
-            if (duplicado) { alert('Já existe um jogador com este nome.'); return; }
-            jogadores[index].nome = novoNome;
-            jogadores[index].editandoNome = false;
-            jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
-            salvarJogadores();
-            atualizarTodasListas();
-            if (modoGerenciamento) { renderizarPlantel(); renderizarRankingCapas(); renderizarRankingPontos(); }
-            if (timesAtuais.length > 0) {
-                timesAtuais.forEach(time => {
-                    time.jogadores.forEach(j => {
-                        const encontrado = jogadores.find(p => p.nome === j.nome);
-                        if (encontrado) j.nome = encontrado.nome;
-                    });
-                });
-                const times = timesAtuais.map(t => t.jogadores);
-                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
-                const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
-                exibirTimes(times, somas, medias, times.map(t => t.length));
-                salvarTimes();
-            }
-        }
-        function cancelarEdicaoNome(index) { jogadores[index].editandoNome = false; renderizarPlantel(); }
-
-        function iniciarEdicaoNota(index) { jogadores[index].editandoNota = true; renderizarPlantel(); }
-        function salvarEdicaoNota(index) {
-            const select = document.getElementById(`editNotaPlantel-${index}`);
-            if (!select) return;
-            const novaNota = parseFloat(select.value);
-            jogadores[index].nota = novaNota;
-            jogadores[index].editandoNota = false;
-            salvarJogadores();
-            atualizarTodasListas();
-            if (modoGerenciamento) { renderizarPlantel(); renderizarRankingCapas(); renderizarRankingPontos(); }
-            if (timesAtuais.length > 0) {
-                timesAtuais.forEach(time => {
-                    time.jogadores.forEach(j => {
-                        const encontrado = jogadores.find(p => p.nome === j.nome);
-                        if (encontrado) j.nota = encontrado.nota;
-                    });
-                });
-                const times = timesAtuais.map(t => t.jogadores);
-                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
-                const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
-                exibirTimes(times, somas, medias, times.map(t => t.length));
-                salvarTimes();
-            }
-        }
-        function cancelarEdicaoNota(index) { jogadores[index].editandoNota = false; renderizarPlantel(); }
-
-        function iniciarEdicaoCapa(index) { jogadores[index].editandoCapa = true; renderizarRankingCapas(); }
-        function salvarEdicaoCapa(index) {
-            const input = document.getElementById(`editCapaPlantel-${index}`);
-            if (!input) return;
-            let valor = parseFloat(input.value);
-            if (isNaN(valor) || valor < 0) { alert('Digite um valor numérico válido (0 ou maior).'); return; }
-            valor = Math.round(valor * 10) / 10;
-            jogadores[index].pontosCapa = valor;
-            jogadores[index].editandoCapa = false;
-            salvarJogadores();
-            renderizarRankingCapas();
-        }
-        function cancelarEdicaoCapa(index) { jogadores[index].editandoCapa = false; renderizarRankingCapas(); }
-
-        function iniciarEdicaoPontos(index) { jogadores[index].editandoPontos = true; renderizarRankingPontos(); }
-        function salvarEdicaoPontos(index) {
-            const input = document.getElementById(`editPontosPlantel-${index}`);
-            if (!input) return;
-            let valor = parseFloat(input.value);
-            if (isNaN(valor)) { alert('Digite um valor numérico válido.'); return; }
-            jogadores[index].pontosJogador = valor;
-            jogadores[index].editandoPontos = false;
-            salvarJogadores();
-            renderizarRankingPontos();
-        }
-        function cancelarEdicaoPontos(index) { jogadores[index].editandoPontos = false; renderizarRankingPontos(); }
-
-        // ============================================================
-        //  RENDERIZAÇÃO
-        // ============================================================
-        function renderizarPlantel() {
-            const container = document.getElementById('listaPlantel');
-            const busca = document.getElementById('buscaPlantel').value.toLowerCase().trim();
-            const filtrados = jogadores.filter(j => j.nome.toLowerCase().includes(busca));
-            if (filtrados.length === 0) { container.innerHTML = '<div class="sem-jogadores">Nenhum jogador encontrado.</div>'; return; }
-            let html = '';
-            filtrados.forEach((j, i) => {
-                const idxGlobal = jogadores.indexOf(j);
-                const editandoNome = j.editandoNome || false;
-                const editandoNota = j.editandoNota || false;
-                html += `<div class="plantel-item" id="plantel-item-${idxGlobal}">`;
-                html += `<div class="nome-area">`;
-                if (editandoNome) {
-                    html += `<input type="text" id="editNomePlantel-${idxGlobal}" value="${j.nome}" placeholder="Nome">`;
-                    html += `<button class="btn-salvar" onclick="salvarEdicaoNome(${idxGlobal})">💾</button>`;
-                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoNome(${idxGlobal})">✖</button>`;
-                } else {
-                    html += `<span class="nome">${j.nome}</span>`;
-                    html += `<button class="btn-editar-nome" onclick="iniciarEdicaoNome(${idxGlobal})">✏️</button>`;
-                }
-                html += `</div>`;
-                html += `<div class="controles">`;
-                if (editandoNota) {
-                    const opcoes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
-                    let selectHTML = `<select id="editNotaPlantel-${idxGlobal}">`;
-                    opcoes.forEach(v => { selectHTML += `<option value="${v}" ${v === j.nota ? 'selected' : ''}>${v}</option>`; });
-                    selectHTML += `</select>`;
-                    html += selectHTML;
-                    html += `<button class="btn-salvar" onclick="salvarEdicaoNota(${idxGlobal})">💾</button>`;
-                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoNota(${idxGlobal})">✖</button>`;
-                } else {
-                    html += `<span style="font-weight:bold; color:#2980b9;">${j.nota}</span>`;
-                    html += `<button class="btn-editar-nota" onclick="iniciarEdicaoNota(${idxGlobal})">✏️</button>`;
-                }
-                html += `<button class="btn-excluir" onclick="removerJogadorPlantel(${idxGlobal})">🗑️</button>`;
-                html += `</div></div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function renderizarRankingCapas() {
-            const container = document.getElementById('listaRankingCapas');
-            if (jogadores.length === 0) { container.innerHTML = '<div class="sem-jogadores">Nenhum jogador cadastrado.</div>'; return; }
-            const ranking = [...jogadores].sort((a, b) => {
-                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
-                return a.nome.localeCompare(b.nome);
-            });
-            let html = '';
-            ranking.forEach((j, i) => {
-                const idxGlobal = jogadores.indexOf(j);
-                const editando = j.editandoCapa || false;
-                html += `<div class="plantel-item" id="capa-item-${idxGlobal}">`;
-                html += `<div class="nome-area"><span class="nome">${j.nome}</span></div>`;
-                html += `<div class="controles">`;
-                if (editando) {
-                    html += `<input type="number" id="editCapaPlantel-${idxGlobal}" value="${j.pontosCapa || 0}" step="0.5" min="0">`;
-                    html += `<button class="btn-salvar" onclick="salvarEdicaoCapa(${idxGlobal})">💾</button>`;
-                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoCapa(${idxGlobal})">✖</button>`;
-                } else {
-                    html += `<span style="font-weight:bold; color:#2980b9;">${j.pontosCapa || 0}</span>`;
-                    html += `<button class="btn-editar-capa" onclick="iniciarEdicaoCapa(${idxGlobal})">✏️</button>`;
-                }
-                html += `</div></div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function renderizarRankingPontos() {
-            const container = document.getElementById('listaRankingPontos');
-            if (jogadores.length === 0) { container.innerHTML = '<div class="sem-jogadores">Nenhum jogador cadastrado.</div>'; return; }
-            const ranking = [...jogadores].sort((a, b) => {
-                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) return (b.pontosJogador || 0) - (a.pontosJogador || 0);
-                return a.nome.localeCompare(b.nome);
-            });
-            let html = '';
-            ranking.forEach((j, i) => {
-                const idxGlobal = jogadores.indexOf(j);
-                const editando = j.editandoPontos || false;
-                html += `<div class="plantel-item" id="pontos-item-${idxGlobal}">`;
-                html += `<div class="nome-area"><span class="nome">${j.nome}</span></div>`;
-                html += `<div class="controles">`;
-                if (editando) {
-                    html += `<input type="number" id="editPontosPlantel-${idxGlobal}" value="${j.pontosJogador || 0}" step="1">`;
-                    html += `<button class="btn-salvar" onclick="salvarEdicaoPontos(${idxGlobal})">💾</button>`;
-                    html += `<button class="btn-cancelar" onclick="cancelarEdicaoPontos(${idxGlobal})">✖</button>`;
-                } else {
-                    html += `<span style="font-weight:bold; color:#27ae60;">${j.pontosJogador || 0}</span>`;
-                    html += `<button class="btn-editar-pontos" onclick="iniciarEdicaoPontos(${idxGlobal})">✏️</button>`;
-                }
-                html += `</div></div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function renderizarSorteio() {
-            const div = document.getElementById('listaSorteio');
-            const info = document.getElementById('infoSelecionados');
-            const busca = document.getElementById('buscaPartida').value.toLowerCase().trim();
-            if (jogadores.length === 0) {
-                div.innerHTML = '<em style="color: #888;">Nenhum jogador cadastrado.</em>';
-                info.innerText = 'Nenhum jogador selecionado.';
-                return;
-            }
-            const filtrados = jogadores.filter(j => j.nome.toLowerCase().includes(busca));
-            let html = '';
-            filtrados.forEach((j) => {
-                const idxGlobal = jogadores.indexOf(j);
-                html += `
-                    <div class="jogador-item">
-                        <input type="checkbox" ${j.selecionado ? 'checked' : ''} onchange="toggleSelecionado(${idxGlobal})">
-                        <label onclick="toggleSelecionado(${idxGlobal})">
-                            ${j.nome} <span class="nota" style="color:#2980b9;">${j.nota}</span>
-                        </label>
-                    </div>
-                `;
-            });
-            div.innerHTML = html;
-            const selecionados = jogadores.filter(j => j.selecionado);
-            info.innerText = `📌 ${selecionados.length} jogador(es) selecionado(s) para o sorteio.`;
-            if (selecionados.length === 0) info.innerText = 'Nenhum jogador selecionado.';
-        }
-
-        function atualizarTodasListas() {
-            renderizarSorteio();
-            if (modoGerenciamento) {
-                renderizarPlantel();
-                renderizarRankingCapas();
-                renderizarRankingPontos();
-            }
-        }
-
-        function selecionarTodos(valor) {
-            jogadores.forEach(j => j.selecionado = valor);
-            salvarJogadores();
-            renderizarSorteio();
-        }
-
-        function toggleSelecionado(index) {
-            jogadores[index].selecionado = !jogadores[index].selecionado;
-            salvarJogadores();
-            renderizarSorteio();
-        }
-
-        // ============================================================
-        //  SORTEIO
-        // ============================================================
-        function calcularDistribuicao(total, N) {
-            if (total < N - 1) return null;
-            let maxA = Math.floor(total / N);
-            for (let a = maxA; a >= 0; a--) {
-                let resto = total - a * N;
-                if (resto % (N - 1) === 0) {
-                    let b = resto / (N - 1);
-                    return { a, b };
-                }
-            }
-            return null;
-        }
-
-        function sortearTimes() {
-            const N = parseInt(document.getElementById('tamanhoDesejado').value);
-            if (isNaN(N) || N < 3) { alert('Informe um número inteiro maior ou igual a 3.'); return; }
-            const selecionados = jogadores.filter(j => j.selecionado);
-            const total = selecionados.length;
-            if (total === 0) { alert('Marque pelo menos alguns jogadores para o sorteio.'); return; }
-            const dist = calcularDistribuicao(total, N);
-            if (!dist) {
-                alert(`Não é possível formar times com ${N} e ${N-1} jogadores para um total de ${total} atletas. Tente outro valor de N.`);
-                return;
-            }
-            const { a, b } = dist;
-            const tamanhos = [];
-            for (let i = 0; i < a; i++) tamanhos.push(N);
-            for (let i = 0; i < b; i++) tamanhos.push(N - 1);
-
-            let melhorSorteio = null;
-            let menorDiferenca = Infinity;
-
-            for (let tentativa = 0; tentativa < 1000; tentativa++) {
-                const copia = [...selecionados];
-                for (let i = copia.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [copia[i], copia[j]] = [copia[j], copia[i]];
-                }
-                const times = [];
-                let idx = 0;
-                for (let t = 0; t < tamanhos.length; t++) {
-                    const size = tamanhos[t];
-                    times.push(copia.slice(idx, idx + size));
-                    idx += size;
-                }
-                const medias = times.map(time => {
-                    const soma = time.reduce((acc, j) => acc + j.nota, 0);
-                    return soma / time.length;
-                });
-                const diferenca = Math.max(...medias) - Math.min(...medias);
-                if (diferenca < menorDiferenca) {
-                    menorDiferenca = diferenca;
-                    const somas = times.map(time => time.reduce((acc, j) => acc + j.nota, 0));
-                    melhorSorteio = { times, somas, medias };
-                }
-                if (diferenca === 0) break;
-            }
-
-            timesAtuais = melhorSorteio.times.map((time, i) => ({
-                jogadores: time,
-                nome: `Time ${i + 1}`,
-                vitorias: 0,
-                empates: 0,
-                pontos: 0
-            }));
-
-            salvarTimes();   // <-- PERSISTIR
-            exibirTimes(melhorSorteio.times, melhorSorteio.somas, melhorSorteio.medias, tamanhos);
-        }
-
-        // ============================================================
-        //  FUNÇÕES DE COR
-        // ============================================================
-        function isValidColor(nomeCor) {
-            const corTraduzida = traduzirCor(nomeCor);
-            try {
-                const temp = document.createElement('div');
-                temp.style.color = corTraduzida;
-                return temp.style.color !== '';
-            } catch (e) { return false; }
-        }
-
-        function getContrastColor(nomeCor) {
-            const corTraduzida = traduzirCor(nomeCor);
-            const temp = document.createElement('div');
-            temp.style.color = corTraduzida;
-            document.body.appendChild(temp);
-            const computedColor = getComputedStyle(temp).color;
-            document.body.removeChild(temp);
-            const match = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-            if (!match) return '#000000';
-            const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            return luminance > 0.5 ? '#000000' : '#ffffff';
-        }
-
-        // ============================================================
-        //  EXIBIR TIMES
-        // ============================================================
-        function exibirTimes(times, somas, medias, tamanhos) {
-            const div = document.getElementById('resultado');
-            let html = `<div class="distribuicao-info">Times formados: ${times.length} equipes (${tamanhos.map(t => t+' jog.').join(', ')})</div>`;
-            html += '<div class="times-grid">';
-
-            times.forEach((time, idx) => {
-                const timeData = timesAtuais[idx];
-                const nomeTime = timeData.nome || `Time ${idx + 1}`;
-                const corTraduzida = traduzirCor(nomeTime);
-                const corValida = isValidColor(corTraduzida) ? corTraduzida : '#f8f9fa';
-                const corTexto = getContrastColor(corValida);
-
-                html += `
-                    <div class="time-card" id="time-${idx}" style="background-color: ${corValida}; color: ${corTexto};">
-                        <div class="time-header">
-                            <div class="nome-time">
-                                <h3 onclick="editarNomeTime(${idx})" id="nome-time-${idx}">${nomeTime}</h3>
-                            </div>
-                            <div class="pontos-header">${timeData.pontos}</div>
-                        </div>
-                        <ul>
-                            ${time.map(j => `<li>${j.nome} <span class="nota">${j.nota}</span></li>`).join('')}
-                        </ul>
-                        <div class="soma-media">
-                            <span>Soma: ${somas[idx].toFixed(1)}</span>
-                            <span>Média: ${medias[idx].toFixed(2)}</span>
-                        </div>
-                        <div class="placar-time">
-                            <div class="grupo">
-                                <span class="v">Vit: ${timeData.vitorias}</span>
-                                <button class="btn-vitoria" onclick="alterarPlacar(${idx}, 'vitoria', 1)">+</button>
-                                <button class="btn-diminuir" onclick="alterarPlacar(${idx}, 'vitoria', -1)">-</button>
-                            </div>
-                            <div class="grupo">
-                                <span class="e">Emp: ${timeData.empates}</span>
-                                <button class="btn-empate" onclick="alterarPlacar(${idx}, 'empate', 1)">+</button>
-                                <button class="btn-diminuir" onclick="alterarPlacar(${idx}, 'empate', -1)">-</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            const diff = Math.max(...medias) - Math.min(...medias);
-            html += `<div class="desequilibrio">Desequilíbrio (diferença entre as médias): ${diff.toFixed(2)}</div>`;
-            div.innerHTML = html;
-        }
-
-        // ============================================================
-        //  EDITAR NOME DO TIME
-        // ============================================================
-        function editarNomeTime(idx) {
-            const timeData = timesAtuais[idx];
-            const nomeAtual = timeData.nome || `Time ${idx + 1}`;
-            const novoNome = prompt('Digite o novo nome do time (pode ser uma cor em português):', nomeAtual);
-            if (novoNome !== null && novoNome.trim() !== '') {
-                timeData.nome = novoNome.trim();
-                const nomeEl = document.getElementById(`nome-time-${idx}`);
-                if (nomeEl) nomeEl.innerText = timeData.nome;
-                const card = document.getElementById(`time-${idx}`);
-                const corTraduzida = traduzirCor(timeData.nome);
-                const corValida = isValidColor(corTraduzida) ? corTraduzida : '#f8f9fa';
-                const corTexto = getContrastColor(corValida);
-                if (card) {
-                    card.style.backgroundColor = corValida;
-                    card.style.color = corTexto;
-                }
-                salvarTimes();   // <-- PERSISTIR
-            }
-        }
-
-        // ============================================================
-        //  ALTERAR PLACAR
-        // ============================================================
-        function alterarPlacar(idx, tipo, delta) {
-            if (idx < 0 || idx >= timesAtuais.length) return;
-            const time = timesAtuais[idx];
-            if (tipo === 'vitoria') {
-                const nova = time.vitorias + delta;
-                if (nova < 0) { alert('Vitórias não podem ficar negativas.'); return; }
-                time.vitorias = nova;
-                time.pontos += delta * 3;
-            } else if (tipo === 'empate') {
-                const nova = time.empates + delta;
-                if (nova < 0) { alert('Empates não podem ficar negativos.'); return; }
-                time.empates = nova;
-                time.pontos += delta * 1;
-            }
-            const times = timesAtuais.map(t => t.jogadores);
-            const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
-            const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
-            exibirTimes(times, somas, medias, times.map(t => t.length));
-            salvarTimes();   // <-- PERSISTIR
-        }
-
-        // ============================================================
-        //  ZERAR PLACARES
-        // ============================================================
-        function zerarTodosPlacares() {
-            timesAtuais.forEach(time => {
-                time.vitorias = 0;
-                time.empates = 0;
-                time.pontos = 0;
-            });
-            if (timesAtuais.length > 0) {
-                const times = timesAtuais.map(t => t.jogadores);
-                const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
-                const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
-                exibirTimes(times, somas, medias, times.map(t => t.length));
-            } else {
-                document.getElementById('resultado').innerHTML = '';
-            }
-            salvarTimes();   // <-- PERSISTIR
-        }
-
-        function zerarTudo() {
-            if (timesAtuais.length === 0) return;
-            if (!confirm('Zerar todos os placares e remover os times?')) return;
-            timesAtuais = [];
-            localStorage.removeItem('timesAtuais');   // <-- LIMPAR PERSISTÊNCIA
-            document.getElementById('resultado').innerHTML = '';
-        }
-
-        // ============================================================
-        //  FINALIZAR PELADA (COM PERGUNTA DE CONFIRMAÇÃO)
-        // ============================================================
-        function finalizarPelada() {
-            if (timesAtuais.length === 0) { alert('Não há times formados. Sorteie os times primeiro.'); return; }
-
-            const confirmar = confirm(
-                '⚠️ Deseja realmente finalizar a pelada?\n\n' +
-                '• Os placares dos times serão zerados.\n' +
-                '• As notas serão ajustadas (+0.5 campeão / -0.5 lanterna).\n' +
-                '• O Ranking de Capas será atualizado.\n' +
-                '• O Ranking de Pontos será atualizado com os pontos da rodada.\n\n' +
-                'Essa ação não pode ser desfeita.'
-            );
-            if (!confirmar) return;
-
-            // Soma pontos da rodada ao Ranking de Pontos
-            timesAtuais.forEach(time => {
-                const pontosTime = time.pontos || 0;
-                if (pontosTime !== 0) {
-                    time.jogadores.forEach(jog => {
-                        const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
-                        if (idxPlantel !== -1) {
-                            jogadores[idxPlantel].pontosJogador = (jogadores[idxPlantel].pontosJogador || 0) + pontosTime;
-                        }
-                    });
-                }
-            });
-
-            const pontos = timesAtuais.map(t => t.pontos);
-            const maxPontos = Math.max(...pontos);
-            const minPontos = Math.min(...pontos);
-            const indicesMax = pontos.reduce((acc, p, i) => p === maxPontos ? [...acc, i] : acc, []);
-            const indicesMin = pontos.reduce((acc, p, i) => p === minPontos ? [...acc, i] : acc, []);
-
-            let mensagem = '';
-            let houveBonus = false;
-            let houvePenalidade = false;
-
-            // Campeão
-            if (indicesMax.length > 1) {
-                mensagem = '🏆 Houve empate no primeiro lugar. Nenhum time receberá bônus.\n';
-                indicesMax.forEach(idx => {
-                    const time = timesAtuais[idx];
-                    time.jogadores.forEach(jog => {
-                        const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
-                        if (idxPlantel !== -1) {
-                            jogadores[idxPlantel].pontosCapa = (jogadores[idxPlantel].pontosCapa || 0) + 0.5;
-                        }
-                    });
-                });
-                mensagem += '🏅 Times empatados em primeiro ganham 0.5 ponto no Ranking de Capas.\n';
-            } else {
-                const idxCampeao = indicesMax[0];
-                const timeCampeao = timesAtuais[idxCampeao];
-                timeCampeao.jogadores.forEach(jog => {
-                    let novaNota = Math.min(10, jog.nota + 0.5);
-                    jog.nota = parseFloat(novaNota.toFixed(1));
-                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
-                    if (idxPlantel !== -1) jogadores[idxPlantel].nota = jog.nota;
-                });
-                timeCampeao.jogadores.forEach(jog => {
-                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
-                    if (idxPlantel !== -1) jogadores[idxPlantel].pontosCapa = (jogadores[idxPlantel].pontosCapa || 0) + 1;
-                });
-                houveBonus = true;
-                mensagem = `🏆 Campeão: ${timeCampeao.nome || 'Time ' + (idxCampeao+1)} (${timeCampeao.pontos} pts) → +0.5 para cada jogador e +1 ponto no Ranking de Capas.\n`;
-            }
-
-            // Lanterna
-            if (indicesMin.length > 1) {
-                mensagem += '📉 Houve empate no último lugar. Nenhum time será penalizado.';
-            } else {
-                const idxLanterna = indicesMin[0];
-                const timeLanterna = timesAtuais[idxLanterna];
-                timeLanterna.jogadores.forEach(jog => {
-                    let novaNota = Math.max(0, jog.nota - 0.5);
-                    jog.nota = parseFloat(novaNota.toFixed(1));
-                    const idxPlantel = jogadores.findIndex(p => p.nome === jog.nome);
-                    if (idxPlantel !== -1) jogadores[idxPlantel].nota = jog.nota;
-                });
-                houvePenalidade = true;
-                mensagem += `📉 Lanterna: ${timeLanterna.nome || 'Time ' + (idxLanterna+1)} (${timeLanterna.pontos} pts) → -0.5 para cada jogador.`;
-            }
-
-            if (!houveBonus && !houvePenalidade) {
-                mensagem = '🏆 Houve empate no primeiro lugar e no último lugar. Nenhuma alteração de nota.';
-            } else if (!houveBonus) {
-                mensagem += '\n\nNão houve bônus (empate no primeiro lugar).';
-            } else if (!houvePenalidade) {
-                mensagem += '\n\nNão houve penalidade (empate no último lugar).';
-            }
-
-            salvarJogadores();
-            atualizarTodasListas();
-
-            // Zerar placares
-            timesAtuais.forEach(time => {
-                time.vitorias = 0;
-                time.empates = 0;
-                time.pontos = 0;
-            });
-
-            const times = timesAtuais.map(t => t.jogadores);
-            const somas = times.map(t => t.reduce((acc, j) => acc + j.nota, 0));
-            const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
-            exibirTimes(times, somas, medias, times.map(t => t.length));
-
-            if (modoGerenciamento) {
-                renderizarRankingCapas();
-                renderizarRankingPontos();
-            }
-
-            salvarTimes();   // <-- PERSISTIR ESTADO ZERADO
-            alert(mensagem + '\n\nPlacares zerados para uma nova rodada!');
-        }
-
-        // ============================================================
-        //  INICIALIZAÇÃO
-        // ============================================================
-        carregarJogadores();
-        carregarTimes();   // <-- RESTAURAR TIMES
-
-        document.getElementById('novoNome').addEventListener('keypress', e => {
-            if (e.key === 'Enter') adicionarJogadorPlantel();
-        });
-
-        // Reforço: salvar antes de descarregar a página
-        window.addEventListener('beforeunload', function() {
-            salvarTimes();
-        });
-    </script>
-</body>
-</html>
+                return (b.pontosCapa || 0) - (
