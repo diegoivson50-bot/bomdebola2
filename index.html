@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* ===== (mesmo CSS da versão anterior) ===== */
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #1a2a3a; display: flex; justify-content: center; padding: 20px; }
         .container { background: #fff; max-width: 1100px; width: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -64,8 +63,6 @@
         .acoes-plantel .btn-pdf-pontos:hover { background: #1e8449; }
         .acoes-plantel .btn-fechar { background: #95a5a6; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
         .acoes-plantel .btn-fechar:hover { background: #7f8c8d; }
-        .acoes-plantel .btn-recalcular { background: #e67e22; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
-        .acoes-plantel .btn-recalcular:hover { background: #d35400; }
         .area-partida { display: block; }
         .area-partida.oculto { display: none; }
         .area-partida .lista-jogadores { background: #f4f6f9; padding: 10px; border-radius: 8px; margin: 15px 0; max-height: 200px; overflow-y: auto; }
@@ -127,6 +124,7 @@
     <div class="container">
         <h1><span class="pomba">🕊️</span> Pelada da Paz</h1>
 
+        <!-- ===== MENU SUSPENSO ===== -->
         <div class="dropdown" id="menuGerenciamento">
             <button onclick="toggleDropdown()">⚙️ Opções ▼</button>
             <div class="dropdown-content">
@@ -136,8 +134,10 @@
             </div>
         </div>
 
+        <!-- ===== PAINEL DE GERENCIAMENTO ===== -->
         <div class="painel-gerenciamento" id="painelGerenciamento">
             <h2 style="margin-top:0; color:#8e44ad;">📋 Gerenciar Plantel</h2>
+
             <div class="area-cadastro">
                 <input type="text" id="novoNome" placeholder="Nome do jogador">
                 <select id="novaNota">
@@ -155,51 +155,65 @@
                 </select>
                 <button onclick="adicionarJogadorPlantel()">➕ Adicionar</button>
             </div>
+
             <div class="busca">
                 <input type="text" id="buscaPlantel" placeholder="🔍 Buscar jogador no plantel..." oninput="renderizarPlantel()">
             </div>
+
             <div class="lista-plantel" id="listaPlantel">
                 <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
             </div>
+
+            <!-- ===== RANKING DE CAPAS ===== -->
             <div class="ranking-capas" id="rankingCapas">
                 <h3>🏆 Ranking de Capas</h3>
                 <div id="listaRankingCapas" class="lista-plantel">
                     <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
                 </div>
             </div>
+
+            <!-- ===== RANKING DE PONTOS ===== -->
             <div class="ranking-pontos" id="rankingPontos">
                 <h3>⭐ Ranking de Pontos</h3>
                 <div id="listaRankingPontos" class="lista-plantel">
                     <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
                 </div>
             </div>
+
             <div class="acoes-plantel">
                 <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar PDF (Geral)</button>
                 <button class="btn-pdf-pontos" onclick="exportarPDFPontos()">📊 Exportar PDF (Pontos)</button>
-                <button class="btn-recalcular" onclick="recalcularRankingPontos()" title="Útil se algo deu errado">🔄 Recalcular Ranking de Pontos</button>
                 <button class="btn-fechar" onclick="fecharGerenciamento()">✖ Fechar Plantel</button>
             </div>
         </div>
 
+        <!-- ===== ÁREA DE PARTIDA ===== -->
         <div class="area-partida" id="areaPartida">
+
             <div class="busca-partida">
                 <input type="text" id="buscaPartida" placeholder="🔍 Buscar jogador para selecionar..." oninput="renderizarSorteio()">
             </div>
+
             <div class="lista-jogadores" id="listaSorteio">
                 <em style="color: #888;">Nenhum jogador cadastrado.</em>
             </div>
             <div class="info" id="infoSelecionados">Nenhum jogador selecionado.</div>
+
             <div class="acoes-partida">
                 <button onclick="selecionarTodos(true)">✅ Selecionar todos</button>
                 <button onclick="selecionarTodos(false)">❌ Desmarcar todos</button>
             </div>
+
             <div class="config">
                 <label for="tamanhoDesejado">Quantos jogadores por time (N)?</label>
                 <input type="number" id="tamanhoDesejado" value="4" min="3" step="1">
                 <span style="font-size:0.9rem; color:#555;">(Serão formados times com N e N−1 jogadores)</span>
             </div>
+
             <button class="btn-sortear" onclick="sortearTimes()">🎲 Sortear Times</button>
+
             <div id="resultado" style="margin-top: 20px;"></div>
+
             <div class="footer-acoes">
                 <button onclick="zerarTodosPlacares()">🔄 Zerar placares</button>
                 <button onclick="zerarTudo()">🗑️ Zerar tudo</button>
@@ -236,14 +250,8 @@
         let timesAtuais = [];
         let modoGerenciamento = false;
 
-        // Histórico de pontos acumulados por rodada (para recalcular)
-        // Cada entrada: { rodada: n, pontosPorJogador: { nome: pontos } }
-        let historicoPontos = [];
-        // Rodada atual: quando finalizar, guardamos
-        let rodadaAtual = 1;
-
         // ============================================================
-        //  PERSISTÊNCIA
+        //  PERSISTÊNCIA DO PLANTEL
         // ============================================================
         function salvarJogadores() {
             localStorage.setItem('plantel', JSON.stringify(jogadores));
@@ -272,6 +280,9 @@
             atualizarTodasListas();
         }
 
+        // ============================================================
+        //  PERSISTÊNCIA DOS TIMES
+        // ============================================================
         function salvarTimes() {
             try {
                 localStorage.setItem('timesAtuais', JSON.stringify(timesAtuais));
@@ -286,6 +297,7 @@
             try {
                 const salvos = JSON.parse(dados);
                 if (!Array.isArray(salvos) || salvos.length === 0) return;
+
                 timesAtuais = salvos.map(t => ({
                     nome: t.nome || 'Time',
                     vitorias: t.vitorias || 0,
@@ -296,47 +308,18 @@
                         return encontrado ? { ...encontrado } : j;
                     }).filter(j => j && j.nome)
                 })).filter(t => t.jogadores.length > 0);
+
                 if (timesAtuais.length === 0) return;
+
                 const times = timesAtuais.map(t => t.jogadores);
                 const somas = times.map(t => t.reduce((acc, j) => acc + (j.nota || 0), 0));
                 const medias = somas.map((s, i) => times[i].length ? s / times[i].length : 0);
                 exibirTimes(times, somas, medias, times.map(t => t.length));
+
+                console.log('Times restaurados do localStorage:', timesAtuais.length);
             } catch (e) {
                 console.warn('Erro ao restaurar times:', e);
                 localStorage.removeItem('timesAtuais');
-            }
-        }
-
-        // ============================================================
-        //  HISTÓRICO DE PONTOS (para recalcular)
-        // ============================================================
-        function salvarHistorico() {
-            localStorage.setItem('historicoPontos', JSON.stringify(historicoPontos));
-        }
-
-        function carregarHistorico() {
-            const dados = localStorage.getItem('historicoPontos');
-            if (dados) {
-                try {
-                    historicoPontos = JSON.parse(dados);
-                } catch (e) {
-                    historicoPontos = [];
-                }
-            } else {
-                historicoPontos = [];
-            }
-        }
-
-        function salvarRodadaAtual() {
-            localStorage.setItem('rodadaAtual', rodadaAtual.toString());
-        }
-
-        function carregarRodadaAtual() {
-            const dados = localStorage.getItem('rodadaAtual');
-            if (dados) {
-                rodadaAtual = parseInt(dados) || 1;
-            } else {
-                rodadaAtual = 1;
             }
         }
 
@@ -381,7 +364,10 @@
         //  EXPORTAR / IMPORTAR TXT
         // ============================================================
         function exportarDados() {
-            if (jogadores.length === 0) { alert('Não há dados para exportar.'); return; }
+            if (jogadores.length === 0) {
+                alert('Não há dados para exportar.');
+                return;
+            }
             let linhas = [];
             for (let j of jogadores) {
                 const selecionado = j.selecionado ? 'true' : 'false';
@@ -422,9 +408,14 @@
                         if (partes.length >= 5) selecionado = (partes[4].toLowerCase() === 'true');
                         novosJogadores.push({ nome, nota, pontosCapa, pontosJogador, selecionado, editandoNome: false, editandoNota: false, editandoCapa: false, editandoPontos: false });
                     }
-                    if (novosJogadores.length === 0) { alert('Nenhum jogador válido encontrado no arquivo.'); return; }
+                    if (novosJogadores.length === 0) {
+                        alert('Nenhum jogador válido encontrado no arquivo.');
+                        return;
+                    }
                     if (jogadores.length > 0) {
-                        if (!confirm(`O plantel atual (${jogadores.length} jogadores) será substituído pelo importado (${novosJogadores.length} jogadores). Continuar?`)) return;
+                        if (!confirm(`O plantel atual (${jogadores.length} jogadores) será substituído pelo importado (${novosJogadores.length} jogadores). Continuar?`)) {
+                            return;
+                        }
                     }
                     jogadores = novosJogadores;
                     jogadores.sort((a, b) => a.nome.localeCompare(b.nome));
@@ -456,4 +447,31 @@
 
             const rankingNotas = [...jogadores].sort((a, b) => {
                 if (b.nota !== a.nota) return b.nota - a.nota;
-                return (b.pontosCapa || 0) - (
+                return (b.pontosCapa || 0) - (a.pontosCapa || 0);
+            });
+            const dadosNotas = rankingNotas.map((j, i) => ({ posicao: i + 1, nome: j.nome, nota: j.nota, capas: j.pontosCapa || 0 }));
+
+            const rankingCapas = [...jogadores].sort((a, b) => {
+                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
+                return a.nome.localeCompare(b.nome);
+            });
+            const dadosCapas = rankingCapas.map((j, i) => ({ posicao: i + 1, nome: j.nome, capas: j.pontosCapa || 0 }));
+
+            const marginLeft = 30, marginRight = 30, marginTop = 60;
+            const maxLinhas = Math.max(dadosNotas.length, dadosCapas.length);
+            const body = [];
+            for (let i = 0; i < maxLinhas; i++) {
+                const nota = dadosNotas[i] || { posicao: '', nome: '', nota: '', capas: '' };
+                const capa = dadosCapas[i] || { posicao: '', nome: '', capas: '' };
+                body.push([nota.posicao ? nota.posicao + '°' : '', nota.nome, nota.nota !== '' ? nota.nota : '', nota.capas !== '' ? nota.capas : '', '', capa.posicao ? capa.posicao + '°' : '', capa.nome, capa.capas !== '' ? capa.capas : '']);
+            }
+
+            const colunas = {
+                0: { cellWidth: 35, halign: 'center' }, 1: { cellWidth: 145 },
+                2: { cellWidth: 30, halign: 'center' }, 3: { cellWidth: 40, halign: 'center' },
+                4: { cellWidth: 50, halign: 'center' }, 5: { cellWidth: 35, halign: 'center' },
+                6: { cellWidth: 145 }, 7: { cellWidth: 40, halign: 'center' }
+            };
+            const posXCapas = marginLeft + 35 + 145 + 30 + 40 + 50 + 35;
+
+            doc
