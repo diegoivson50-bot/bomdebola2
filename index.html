@@ -14,13 +14,25 @@
         .container { background: #fff; max-width: 1100px; width: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { text-align: center; color: #1a2a3a; border-bottom: 3px solid #f39c12; padding-bottom: 10px; margin-top: 0; font-size: 2rem; }
         h1 .pomba { font-size: 2.2rem; margin-right: 8px; }
-        .dropdown { position: relative; display: inline-block; margin-bottom: 15px; }
-        .dropdown button { background: #8e44ad; color: #fff; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        .dropdown button:hover { background: #6c3483; }
-        .dropdown-content { display: none; position: absolute; background: #fff; min-width: 200px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); border-radius: 8px; z-index: 10; padding: 8px 0; }
-        .dropdown-content button { display: block; width: 100%; padding: 10px 16px; border: none; background: transparent; text-align: left; cursor: pointer; font-size: 0.95rem; color: #2c3e50; }
-        .dropdown-content button:hover { background: #f0f3f7; }
-        .dropdown.show .dropdown-content { display: block; }
+
+        /* ===== BARRA DE NAVEGAÇÃO COM DOIS BOTÕES ===== */
+        .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; }
+        .nav-botoes button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #fff;
+            transition: background 0.2s;
+        }
+        .nav-botoes .btn-plantel { background: #8e44ad; }
+        .nav-botoes .btn-plantel:hover { background: #6c3483; }
+        .nav-botoes .btn-sorteio { background: #2980b9; }
+        .nav-botoes .btn-sorteio:hover { background: #1a5276; }
+
         .painel-gerenciamento { background: #f0f3f7; border-radius: 16px; padding: 20px; margin: 20px 0; border: 2px solid #8e44ad; display: none; }
         .painel-gerenciamento.ativo { display: block; }
         .painel-gerenciamento .area-cadastro { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
@@ -61,8 +73,15 @@
         .acoes-plantel .btn-pdf:hover { background: #b03a2e; }
         .acoes-plantel .btn-pdf-pontos { background: #27ae60; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
         .acoes-plantel .btn-pdf-pontos:hover { background: #1e8449; }
-        .acoes-plantel .btn-fechar { background: #95a5a6; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
-        .acoes-plantel .btn-fechar:hover { background: #7f8c8d; }
+        .acoes-plantel .btn-zerar-capas { background: #8e44ad; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-zerar-capas:hover { background: #6c3483; }
+        .acoes-plantel .btn-zerar-pontos { background: #2980b9; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-zerar-pontos:hover { background: #1a5276; }
+        .acoes-plantel .btn-exportar-txt { background: #16a085; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-exportar-txt:hover { background: #117a65; }
+        .acoes-plantel .btn-importar-txt { background: #d35400; border: none; padding: 8px 18px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+        .acoes-plantel .btn-importar-txt:hover { background: #a04000; }
+
         .area-partida { display: block; }
         .area-partida.oculto { display: none; }
         .area-partida .lista-jogadores { background: #f4f6f9; padding: 10px; border-radius: 8px; margin: 15px 0; max-height: 200px; overflow-y: auto; }
@@ -111,7 +130,6 @@
         .distribuicao-info { text-align: center; margin: 10px 0; font-weight: bold; color: #2c3e50; }
         #importInput { display: none; }
         @media (max-width: 700px) {
-            .dropdown-content { left: 0; right: 0; }
             .time-card .time-header { flex-wrap: wrap; }
             .placar-time { flex-direction: column; align-items: stretch; }
             .placar-time .grupo { justify-content: flex-start; }
@@ -124,17 +142,11 @@
     <div class="container">
         <h1><span class="pomba">🕊️</span> Pelada da Paz</h1>
 
-        <!-- ===== MENU SUSPENSO ===== -->
-        <div class="dropdown" id="menuGerenciamento">
-            <button onclick="toggleDropdown()">⚙️ Opções ▼</button>
-            <div class="dropdown-content">
-                <button onclick="abrirGerenciamento(); fecharDropdown()">📋 Gerenciar Plantel</button>
-                <button onclick="exportarDados(); fecharDropdown()">📤 Exportar TXT</button>
-                <button onclick="document.getElementById('importInput').click(); fecharDropdown()">📥 Importar TXT</button>
-            </div>
+        <div class="nav-botoes">
+            <button class="btn-plantel" onclick="abrirGerenciamento()">📋 Plantel</button>
+            <button class="btn-sorteio" onclick="fecharGerenciamento()">🎲 Sorteio</button>
         </div>
 
-        <!-- ===== PAINEL DE GERENCIAMENTO ===== -->
         <div class="painel-gerenciamento" id="painelGerenciamento">
             <h2 style="margin-top:0; color:#8e44ad;">📋 Gerenciar Plantel</h2>
 
@@ -164,7 +176,6 @@
                 <div class="sem-jogadores">Nenhum jogador cadastrado.</div>
             </div>
 
-            <!-- ===== RANKING DE CAPAS ===== -->
             <div class="ranking-capas" id="rankingCapas">
                 <h3>🏆 Ranking de Capas</h3>
                 <div id="listaRankingCapas" class="lista-plantel">
@@ -172,7 +183,6 @@
                 </div>
             </div>
 
-            <!-- ===== RANKING DE PONTOS ===== -->
             <div class="ranking-pontos" id="rankingPontos">
                 <h3>⭐ Ranking de Pontos</h3>
                 <div id="listaRankingPontos" class="lista-plantel">
@@ -183,11 +193,13 @@
             <div class="acoes-plantel">
                 <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar PDF (Geral)</button>
                 <button class="btn-pdf-pontos" onclick="exportarPDFPontos()">📊 Exportar PDF (Pontos)</button>
-                <button class="btn-fechar" onclick="fecharGerenciamento()">✖ Fechar Plantel</button>
+                <button class="btn-exportar-txt" onclick="exportarDados()">📤 Exportar TXT</button>
+                <button class="btn-importar-txt" onclick="document.getElementById('importInput').click()">📥 Importar TXT</button>
+                <button class="btn-zerar-capas" onclick="zerarCapas()">🧹 Zerar Capas</button>
+                <button class="btn-zerar-pontos" onclick="zerarPontos()">🧹 Zerar Pontos</button>
             </div>
         </div>
 
-        <!-- ===== ÁREA DE PARTIDA ===== -->
         <div class="area-partida" id="areaPartida">
 
             <div class="busca-partida">
@@ -249,6 +261,20 @@
         let jogadores = [];
         let timesAtuais = [];
         let modoGerenciamento = false;
+
+        // ============================================================
+        //  COMPARADOR DO RANKING DE PONTOS
+        //  Critério: mais pontos > mais capas > nome (alfabético)
+        // ============================================================
+        function compararPorPontos(a, b) {
+            const pa = a.pontosJogador || 0;
+            const pb = b.pontosJogador || 0;
+            if (pb !== pa) return pb - pa;
+            const ca = a.pontosCapa || 0;
+            const cb = b.pontosCapa || 0;
+            if (cb !== ca) return cb - ca;
+            return a.nome.localeCompare(b.nome);
+        }
 
         // ============================================================
         //  PERSISTÊNCIA DO PLANTEL
@@ -324,26 +350,7 @@
         }
 
         // ============================================================
-        //  MENU DROPDOWN
-        // ============================================================
-        function toggleDropdown() {
-            document.getElementById('menuGerenciamento').classList.toggle('show');
-        }
-        window.addEventListener('click', function(e) {
-            if (!e.target.matches('#menuGerenciamento button')) {
-                const dropdowns = document.getElementsByClassName('dropdown-content');
-                for (let d of dropdowns) {
-                    d.parentElement.classList.remove('show');
-                }
-            }
-        });
-
-        function fecharDropdown() {
-            document.getElementById('menuGerenciamento').classList.remove('show');
-        }
-
-        // ============================================================
-        //  ABRIR / FECHAR GERENCIAMENTO
+        //  NAVEGAÇÃO ENTRE ÁREAS (PLANTEL / SORTEIO)
         // ============================================================
         function abrirGerenciamento() {
             modoGerenciamento = true;
@@ -436,64 +443,130 @@
         }
 
         // ============================================================
-        //  EXPORTAR PDF (RANKING NOTAS + CAPAS)
+        //  EXPORTAR PDF (PONTOS + CAPAS + NOTAS)
         // ============================================================
         function exportarPDF() {
             if (jogadores.length === 0) { alert('Não há jogadores para exportar.'); return; }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('portrait', 'pt', 'a4');
             doc.setFontSize(20);
-            doc.text('Rankings - Pelada da Paz', 40, 40);
+            doc.text('Rankings - Pelada da Paz', 30, 40);
 
+            // ----- Ranking de Pontos (1º bloco) -----
+            const rankingPontos = [...jogadores].sort(compararPorPontos);
+            const dadosPontos = rankingPontos.map((j, i) => ({
+                posicao: i + 1, nome: j.nome, pontos: j.pontosJogador || 0
+            }));
+
+            // ----- Ranking de Capas (2º bloco) -----
+            const rankingCapas = [...jogadores].sort((a, b) => {
+                if ((b.pontosCapa || 0) !== (a.pontosCapa || 0)) return (b.pontosCapa || 0) - (a.pontosCapa || 0);
+                return a.nome.localeCompare(b.nome);
+            });
+            const dadosCapas = rankingCapas.map((j, i) => ({
+                posicao: i + 1, nome: j.nome, capas: j.pontosCapa || 0
+            }));
+
+            // ----- Ranking de Notas (3º bloco) -----
             const rankingNotas = [...jogadores].sort((a, b) => {
                 if (b.nota !== a.nota) return b.nota - a.nota;
                 return (b.pontosCapa || 0) - (a.pontosCapa || 0);
             });
-            const dadosNotas = rankingNotas.map((j, i) => ({ posicao: i + 1, nome: j.nome, nota: j.nota, capas: j.pontosCapa || 0 }));
+            const dadosNotas = rankingNotas.map((j, i) => ({
+                posicao: i + 1, nome: j.nome, nota: j.nota, capas: j.pontosCapa || 0
+            }));
 
-            const rankingCapas = [...jogadores].sort((a, b) => {
-                if (b.pontosCapa !== a.pontosCapa) return b.pontosCapa - a.pontosCapa;
-                return a.nome.localeCompare(b.nome);
-            });
-            const dadosCapas = rankingCapas.map((j, i) => ({ posicao: i + 1, nome: j.nome, capas: j.pontosCapa || 0 }));
+            const larguras = {
+                0:  { cellWidth: 26, halign: 'center' },
+                1:  { cellWidth: 88 },
+                2:  { cellWidth: 30, halign: 'center' },
+                3:  { cellWidth: 14, halign: 'center' },
+                4:  { cellWidth: 26, halign: 'center' },
+                5:  { cellWidth: 88 },
+                6:  { cellWidth: 30, halign: 'center' },
+                7:  { cellWidth: 14, halign: 'center' },
+                8:  { cellWidth: 26, halign: 'center' },
+                9:  { cellWidth: 88 },
+                10: { cellWidth: 28, halign: 'center' },
+                11: { cellWidth: 30, halign: 'center' },
+                12: { cellWidth: 14, halign: 'center' }
+            };
 
-            const marginLeft = 30, marginRight = 30, marginTop = 60;
-            const maxLinhas = Math.max(dadosNotas.length, dadosCapas.length);
+            const margemEsq = 20;
+            const margemDir = 20;
+
+            const xTituloPontos = margemEsq;
+            const xTituloCapas  = margemEsq + larguras[0].cellWidth + larguras[1].cellWidth + larguras[2].cellWidth + larguras[3].cellWidth + larguras[4].cellWidth;
+            const xTituloNotas  = margemEsq + larguras[0].cellWidth + larguras[1].cellWidth + larguras[2].cellWidth + larguras[3].cellWidth + larguras[4].cellWidth + larguras[5].cellWidth + larguras[6].cellWidth + larguras[7].cellWidth + larguras[8].cellWidth;
+
+            const marginTop = 70;
+
+            const maxLinhas = Math.max(dadosPontos.length, dadosCapas.length, dadosNotas.length);
             const body = [];
             for (let i = 0; i < maxLinhas; i++) {
-                const nota = dadosNotas[i] || { posicao: '', nome: '', nota: '', capas: '' };
+                const ponto = dadosPontos[i] || { posicao: '', nome: '', pontos: '' };
                 const capa = dadosCapas[i] || { posicao: '', nome: '', capas: '' };
-                body.push([nota.posicao ? nota.posicao + '°' : '', nota.nome, nota.nota !== '' ? nota.nota : '', nota.capas !== '' ? nota.capas : '', '', capa.posicao ? capa.posicao + '°' : '', capa.nome, capa.capas !== '' ? capa.capas : '']);
+                const nota = dadosNotas[i] || { posicao: '', nome: '', nota: '', capas: '' };
+                body.push([
+                    ponto.posicao ? ponto.posicao + '°' : '',
+                    ponto.nome,
+                    ponto.pontos !== '' ? ponto.pontos : '',
+                    '',
+                    capa.posicao ? capa.posicao + '°' : '',
+                    capa.nome,
+                    capa.capas !== '' ? capa.capas : '',
+                    '',
+                    nota.posicao ? nota.posicao + '°' : '',
+                    nota.nome,
+                    nota.nota !== '' ? nota.nota : '',
+                    nota.capas !== '' ? nota.capas : '',
+                    ''
+                ]);
             }
 
-            const colunas = {
-                0: { cellWidth: 35, halign: 'center' }, 1: { cellWidth: 145 },
-                2: { cellWidth: 30, halign: 'center' }, 3: { cellWidth: 40, halign: 'center' },
-                4: { cellWidth: 50, halign: 'center' }, 5: { cellWidth: 35, halign: 'center' },
-                6: { cellWidth: 145 }, 7: { cellWidth: 40, halign: 'center' }
-            };
-            const posXCapas = marginLeft + 35 + 145 + 30 + 40 + 50 + 35;
-
-            doc.setFontSize(12);
-            doc.text('Ranking de Notas', marginLeft, marginTop);
-            doc.text('Ranking de Capas', posXCapas, marginTop);
+            doc.setFontSize(11);
+            doc.text('Ranking de Pontos', xTituloPontos, marginTop);
+            doc.text('Ranking de Capas', xTituloCapas, marginTop);
+            doc.text('Ranking de Notas', xTituloNotas, marginTop);
 
             doc.autoTable({
-                startY: marginTop + 10,
-                head: [['Pos.', 'Nome', 'Nota', 'Capas', '', 'Pos.', 'Nome', 'Capas']],
+                startY: marginTop + 8,
+                head: [[
+                    'Pos.', 'Nome', 'Pontos', '',
+                    'Pos.', 'Nome', 'Capas', '',
+                    'Pos.', 'Nome', 'Nota', 'Capas', ''
+                ]],
                 body: body,
                 theme: 'striped',
-                headStyles: { fontSize: 9, halign: 'center', fillColor: '#8e44ad', textColor: '#fff' },
-                bodyStyles: { fontSize: 8 },
-                columnStyles: colunas,
-                margin: { left: marginLeft, right: marginRight },
+                headStyles: { fontSize: 8, halign: 'center', fillColor: '#8e44ad', textColor: '#fff' },
+                bodyStyles: { fontSize: 7 },
+                columnStyles: larguras,
+                margin: { left: margemEsq, right: margemDir },
                 didParseCell: function(data) {
                     if (data.section === 'head') {
-                        if (data.column.index >= 0 && data.column.index <= 3) { data.cell.styles.fillColor = '#8e44ad'; data.cell.styles.textColor = '#fff'; }
-                        else if (data.column.index === 4) { data.cell.styles.fillColor = '#fff'; data.cell.styles.textColor = '#ccc'; }
-                        else if (data.column.index >= 5 && data.column.index <= 7) { data.cell.styles.fillColor = '#2980b9'; data.cell.styles.textColor = '#fff'; }
+                        if (data.column.index >= 0 && data.column.index <= 2) {
+                            data.cell.styles.fillColor = '#27ae60';
+                            data.cell.styles.textColor = '#fff';
+                        } else if (data.column.index === 3) {
+                            data.cell.styles.fillColor = '#ffffff';
+                            data.cell.styles.textColor = '#cccccc';
+                        } else if (data.column.index >= 4 && data.column.index <= 6) {
+                            data.cell.styles.fillColor = '#2980b9';
+                            data.cell.styles.textColor = '#fff';
+                        } else if (data.column.index === 7) {
+                            data.cell.styles.fillColor = '#ffffff';
+                            data.cell.styles.textColor = '#cccccc';
+                        } else if (data.column.index >= 8 && data.column.index <= 11) {
+                            data.cell.styles.fillColor = '#8e44ad';
+                            data.cell.styles.textColor = '#fff';
+                        } else if (data.column.index === 12) {
+                            data.cell.styles.fillColor = '#ffffff';
+                            data.cell.styles.textColor = '#cccccc';
+                        }
                     }
-                    if (data.section === 'body' && data.column.index === 4) data.cell.styles.fillColor = '#fff';
+                    if (data.section === 'body' && [3, 7, 12].includes(data.column.index)) {
+                        data.cell.styles.fillColor = '#ffffff';
+                    }
                 }
             });
 
@@ -506,7 +579,7 @@
         }
 
         // ============================================================
-        //  EXPORTAR PDF (RANKING DE PONTOS)
+        //  EXPORTAR PDF (RANKING DE PONTOS) - PDF exclusivo
         // ============================================================
         function exportarPDFPontos() {
             if (jogadores.length === 0) { alert('Não há jogadores para exportar.'); return; }
@@ -515,10 +588,7 @@
             doc.setFontSize(20);
             doc.text('Ranking de Pontos - Pelada da Paz', 40, 40);
 
-            const rankingPontos = [...jogadores].sort((a, b) => {
-                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) return (b.pontosJogador || 0) - (a.pontosJogador || 0);
-                return a.nome.localeCompare(b.nome);
-            });
+            const rankingPontos = [...jogadores].sort(compararPorPontos);
             const body = rankingPontos.map((j, i) => [i + 1 + '°', j.nome, j.pontosJogador || 0]);
 
             doc.autoTable({
@@ -641,6 +711,9 @@
             jogadores[index].editandoCapa = false;
             salvarJogadores();
             renderizarRankingCapas();
+            // Como as capas servem de desempate no Ranking de Pontos,
+            // re-renderizamos também esse ranking.
+            renderizarRankingPontos();
         }
         function cancelarEdicaoCapa(index) { jogadores[index].editandoCapa = false; renderizarRankingCapas(); }
 
@@ -656,6 +729,34 @@
             renderizarRankingPontos();
         }
         function cancelarEdicaoPontos(index) { jogadores[index].editandoPontos = false; renderizarRankingPontos(); }
+
+        // ============================================================
+        //  ZERAR CAPAS E PONTOS (COM CONFIRMAÇÃO)
+        // ============================================================
+        function zerarCapas() {
+            if (jogadores.length === 0) { alert('Não há jogadores cadastrados.'); return; }
+            if (!confirm('⚠️ Tem certeza de que deseja ZERAR TODAS as capas de TODOS os jogadores?\n\nEssa ação não pode ser desfeita.')) return;
+            jogadores.forEach(j => { j.pontosCapa = 0; });
+            salvarJogadores();
+            if (modoGerenciamento) {
+                renderizarRankingCapas();
+                renderizarRankingPontos();
+                renderizarPlantel();
+            }
+            alert('Todas as capas foram zeradas.');
+        }
+
+        function zerarPontos() {
+            if (jogadores.length === 0) { alert('Não há jogadores cadastrados.'); return; }
+            if (!confirm('⚠️ Tem certeza de que deseja ZERAR TODOS os pontos de TODOS os jogadores?\n\nEssa ação não pode ser desfeita.')) return;
+            jogadores.forEach(j => { j.pontosJogador = 0; });
+            salvarJogadores();
+            if (modoGerenciamento) {
+                renderizarRankingPontos();
+                renderizarPlantel();
+            }
+            alert('Todos os pontos foram zerados.');
+        }
 
         // ============================================================
         //  RENDERIZAÇÃO
@@ -730,10 +831,8 @@
         function renderizarRankingPontos() {
             const container = document.getElementById('listaRankingPontos');
             if (jogadores.length === 0) { container.innerHTML = '<div class="sem-jogadores">Nenhum jogador cadastrado.</div>'; return; }
-            const ranking = [...jogadores].sort((a, b) => {
-                if ((b.pontosJogador || 0) !== (a.pontosJogador || 0)) return (b.pontosJogador || 0) - (a.pontosJogador || 0);
-                return a.nome.localeCompare(b.nome);
-            });
+            // Desempate: pontos > capas > nome
+            const ranking = [...jogadores].sort(compararPorPontos);
             let html = '';
             ranking.forEach((j) => {
                 const idxGlobal = jogadores.indexOf(j);
@@ -977,7 +1076,7 @@
         }
 
         // ============================================================
-        //  ALTERAR PLACAR (apenas placar do time - NÃO mexe no ranking de pontos)
+        //  ALTERAR PLACAR
         // ============================================================
         function alterarPlacar(idx, tipo, delta) {
             if (idx < 0 || idx >= timesAtuais.length) return;
@@ -1029,7 +1128,7 @@
         }
 
         // ============================================================
-        //  FINALIZAR PELADA (soma pontos do time ao ranking de pontos)
+        //  FINALIZAR PELADA
         // ============================================================
         function finalizarPelada() {
             if (timesAtuais.length === 0) { alert('Não há times formados. Sorteie os times primeiro.'); return; }
@@ -1044,7 +1143,6 @@
             );
             if (!confirmar) return;
 
-            // 1) Soma os pontos do time ao ranking de pontos dos jogadores
             timesAtuais.forEach(time => {
                 const pontosTime = time.pontos || 0;
                 if (pontosTime !== 0) {
@@ -1067,7 +1165,6 @@
             let houveBonus = false;
             let houvePenalidade = false;
 
-            // Campeão
             if (indicesMax.length > 1) {
                 mensagem = '🏆 Houve empate no primeiro lugar. Nenhum time receberá bônus.\n';
                 indicesMax.forEach(idx => {
@@ -1095,7 +1192,6 @@
                 mensagem = `🏆 Campeão: ${timeCampeao.nome || 'Time ' + (idxCampeao+1)} (${timeCampeao.pontos} pts) → +0.5 para cada jogador e +1 ponto no Ranking de Capas.\n`;
             }
 
-            // Lanterna
             if (indicesMin.length > 1) {
                 mensagem += '📉 Houve empate no último lugar. Nenhum time será penalizado.';
             } else {
@@ -1122,7 +1218,6 @@
             salvarJogadores();
             atualizarTodasListas();
 
-            // Zerar placares
             timesAtuais.forEach(time => {
                 time.vitorias = 0;
                 time.empates = 0;
